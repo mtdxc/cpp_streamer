@@ -23,10 +23,7 @@ RtcSendStream::RtcSendStream(MEDIA_PKT_TYPE type,
     nack_enable_ = nack;
     has_rtx_     = false;
 
-    last_sr_ntp_ts_ = {
-        .ntp_sec  = 0,
-        .ntp_frac = 0
-    };
+    last_sr_ntp_ts_ = {0, 0};
 
     send_buffer_.resize(SEND_BUFFER_SIZE);
     for (auto& item : send_buffer_) {
@@ -55,10 +52,7 @@ RtcSendStream::RtcSendStream(MEDIA_PKT_TYPE type,
     rtx_payload_ = rtx_payload;
     rtx_ssrc_    = rtx_ssrc;
 
-    last_sr_ntp_ts_ = {
-        .ntp_sec  = 0,
-        .ntp_frac = 0
-    };
+    last_sr_ntp_ts_ = {0, 0};
 
     send_buffer_.resize(SEND_BUFFER_SIZE);
     for (auto& item : send_buffer_) {

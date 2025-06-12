@@ -6,7 +6,7 @@
 #include <string>
 #include <iostream>
 #include <memory>
-#include <unistd.h>
+#include "getopt.h"
 #include <vector>
 
 using namespace cpp_streamer;

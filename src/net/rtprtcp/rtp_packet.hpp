@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <string>
-#include <arpa/inet.h>
 #include <map>
 
 namespace cpp_streamer

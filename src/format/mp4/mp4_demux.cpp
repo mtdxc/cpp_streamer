@@ -501,14 +501,14 @@ void Mp4Demuxer::getSampleInfoInChunk(uint32_t chunk_offset, size_t chunk_index,
         bool keyFrame = isKeyframe(sample_index, trakinfo);
 
         MovItem item = {
-            .av_type_ = av_type,
-            .codec_type_ = trakinfo.codec_type_,
-            .offset = sample_offset,
-            .len = sample_size,
-            .dts = dts,
-            .pts = pts,
-            .timescale_ = 1000000,
-            .is_keyframe_ = keyFrame
+            av_type,
+            trakinfo.codec_type_,
+            sample_offset,
+            sample_size,
+            dts,
+            pts,
+            1000000,
+            keyFrame
         };
         if (trakinfo.timescale_ > 0) {
             item.dts = item.dts * 1000000 / trakinfo.timescale_;

@@ -195,10 +195,9 @@ int SdpTransform::ParseFmtp(const std::string& line) {
     int pt = atoi(fmtp_str.substr(0, pos).c_str());
     std::string attr = fmtp_str.substr(pos + 1);
 
-    FmtpInfo info = {
-        .payload_type = pt,
-        .attr_string  = attr
-    };
+    FmtpInfo info = {};
+    info.payload_type = pt;
+    info.attr_string = attr;
 
     pos = attr.find(apt_attr);
     if (pos != std::string::npos) {
@@ -244,10 +243,9 @@ int SdpTransform::ParseRtcpFb(const std::string& line) {
     int pt = atoi(rtcp_fb_string.substr(0, pos).c_str());
     std::string attr_string = rtcp_fb_string.substr(pos + 1);
 
-    RtcpFbInfo info = {
-        .payload_type = pt,
-        .attr_string  = attr_string
-    };
+    RtcpFbInfo info = {};
+    info.payload_type = pt;
+    info.attr_string  = attr_string;
 
     if (current_is_video_) {
         video_rtcpfb_vec_.push_back(info);
@@ -295,10 +293,7 @@ int SdpTransform::ParseExtMap(const std::string& line) {
     int ext_id = atoi(ext_string.substr(0, pos).c_str());
     std::string desc = ext_string.substr(pos + 1);
 
-    ExtInfo info = {
-        .ext_id = ext_id,
-        .desc   = desc
-    };
+    ExtInfo info = {ext_id, desc};
 
     ext_map_[ext_id] = info;
 

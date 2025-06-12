@@ -2,8 +2,7 @@
 #include "logger.hpp"
 #include <vector>
 #include <cstring>
-#include <netinet/in.h>
-
+#include "ipaddress.hpp"
 namespace cpp_streamer
 {
 

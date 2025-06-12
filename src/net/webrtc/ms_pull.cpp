@@ -266,17 +266,17 @@ void MsPull::HandleTransportResponse(std::shared_ptr<HttpClientResponse> resp_pt
         return;
     }
     Report("transport_send", "ready");
-    transport_id_ = data_json["id"];
+    transport_id_ = data_json["id"].get<std::string>();
 
     auto iceParameters_json = data_json["iceParameters"];
-    ice_pwd_ = iceParameters_json["password"];
-    ice_usr_frag_ = iceParameters_json["usernameFragment"];
+    ice_pwd_ = iceParameters_json["password"].get<std::string>();
+    ice_usr_frag_ = iceParameters_json["usernameFragment"].get<std::string>();
 
     auto iceCandidates_array = data_json["iceCandidates"];
     for (auto& item : iceCandidates_array) {
-        candidate_ip_    = item["ip"];
+        candidate_ip_    = item["ip"].get<std::string>();
         candidate_port_  = item["port"];
-        candidate_proto_ = item["protocol"];
+        candidate_proto_ = item["protocol"].get<std::string>();
     }
 
     auto dtlsParameters_json = data_json["dtlsParameters"];
@@ -287,7 +287,7 @@ void MsPull::HandleTransportResponse(std::shared_ptr<HttpClientResponse> resp_pt
         if (algorithm != "sha-256") {
             continue;
         }
-        alg_value_ = item["value"];
+        alg_value_ = item["value"].get<std::string>();
     }
 
     LogInfof(logger_, "webrtc transport ice_pwd:%s, user_fragment:%s, candidate_ip:%s, candidate_port:%d, finger_print:%s",
@@ -321,7 +321,7 @@ void MsPull::HandleTransportConnectResponse(std::shared_ptr<HttpClientResponse> 
 void MsPull::ParseVideoConsume(const std::string& data) {
     auto ret_json = json::parse(data);
 
-    video_consume_id_ = ret_json["id"];
+    video_consume_id_ = ret_json["id"].get<std::string>();
 
     std::string prd_id = ret_json["producerId"];
     if (prd_id != video_produce_id_) {
@@ -415,7 +415,7 @@ void MsPull::ParseVideoConsume(const std::string& data) {
 void MsPull::ParseAudioConsume(const std::string& data) {
     auto ret_json = json::parse(data);
 
-    audio_consume_id_ = ret_json["id"];
+    audio_consume_id_ = ret_json["id"].get<std::string>();
 
     std::string prd_id = ret_json["producerId"];
     if (prd_id != audio_produce_id_) {

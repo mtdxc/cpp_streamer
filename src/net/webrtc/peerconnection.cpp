@@ -211,98 +211,61 @@ std::string PeerConnection::CreateOfferSdp(WebRtcSdpDirection direction_type) {
     offer_sdp_.audio_pt_vec_.push_back(APLAYLOAD_DEF_TYPE);
 
     //start: audio/video RtpMap
-    RtpMapInfo h264RtpInfo = {
-        .payload_type = VPLAYLOAD_DEF_TYPE,
-        .codec_type   = "H264",
-        .clock_rate   = 90000
-    };
+    RtpMapInfo h264RtpInfo = {};
+    h264RtpInfo.payload_type = VPLAYLOAD_DEF_TYPE;
+    h264RtpInfo.codec_type   = "H264";
+    h264RtpInfo.clock_rate   = 90000;
     offer_sdp_.video_rtp_map_infos_[VPLAYLOAD_DEF_TYPE] = h264RtpInfo;
 
-    RtpMapInfo rtxRtpInfo = {
-        .payload_type = RTX_PAYLOAD_DEF_TYPE,
-        .codec_type   = "rtx",
-        .clock_rate   = 90000
-    };
+    RtpMapInfo rtxRtpInfo = {};
+    rtxRtpInfo.payload_type = RTX_PAYLOAD_DEF_TYPE;
+    rtxRtpInfo.codec_type   = "rtx";
+    rtxRtpInfo.clock_rate   = 90000;
     offer_sdp_.video_rtp_map_infos_[RTX_PAYLOAD_DEF_TYPE] = rtxRtpInfo;
 
-    RtpMapInfo opusRtpInfo = {
-        .payload_type = APLAYLOAD_DEF_TYPE,
-        .codec_type   = "opus",
-        .clock_rate   = 48000,
-        .channel      = 2
-    };
+    RtpMapInfo opusRtpInfo = {};
+    opusRtpInfo.payload_type = APLAYLOAD_DEF_TYPE;
+    opusRtpInfo.codec_type   = "opus";
+    opusRtpInfo.clock_rate   = 48000;
+    opusRtpInfo.channel      = 2;
     offer_sdp_.audio_rtp_map_infos_[APLAYLOAD_DEF_TYPE] = opusRtpInfo;
     //end: audio/video RtpMap
     
     //start: audio/video fmtp info
-    FmtpInfo h264FmtpInfo = {
-        .payload_type = VPLAYLOAD_DEF_TYPE,
-        .attr_string  = "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f",
-        .is_video     = true,
-        .is_rtx       = false,
-        .rtx_payload_type = RTX_PAYLOAD_DEF_TYPE
-    
-    };
+    FmtpInfo h264FmtpInfo = {};
+    h264FmtpInfo.payload_type = VPLAYLOAD_DEF_TYPE;
+    h264FmtpInfo.attr_string  = "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f";
+    h264FmtpInfo.is_video     = true;
+    h264FmtpInfo.is_rtx       = false;
+    h264FmtpInfo.rtx_payload_type = RTX_PAYLOAD_DEF_TYPE;
     offer_sdp_.video_fmtp_vec_.push_back(h264FmtpInfo);
 
     std::string rtxFmtpStr = "apt=";
     rtxFmtpStr += std::to_string(VPLAYLOAD_DEF_TYPE);
-    FmtpInfo rtxFmtpInfo = {
-        .payload_type = RTX_PAYLOAD_DEF_TYPE,
-        .attr_string  = rtxFmtpStr,
-        .is_video     = true,
-        .is_rtx       = true,
-        .rtx_payload_type = 0
-    
-    };
+    FmtpInfo rtxFmtpInfo = {};
+    rtxFmtpInfo.payload_type = RTX_PAYLOAD_DEF_TYPE;
+    rtxFmtpInfo.attr_string  = rtxFmtpStr;
+    rtxFmtpInfo.is_video     = true;
+    rtxFmtpInfo.is_rtx       = true;
+    rtxFmtpInfo.rtx_payload_type = 0;
     offer_sdp_.video_fmtp_vec_.push_back(rtxFmtpInfo);
 
-    FmtpInfo opusFmtpInfo = {
-        .payload_type = APLAYLOAD_DEF_TYPE,
-        .attr_string  = "minptime=10;useinbandfec=1",
-        .is_video     = false,
-        .is_rtx       = false,
-        .rtx_payload_type = 0
-    };
+    FmtpInfo opusFmtpInfo = {};
+    opusFmtpInfo.payload_type = APLAYLOAD_DEF_TYPE;
+    opusFmtpInfo.attr_string  = "minptime=10;useinbandfec=1";
+    opusFmtpInfo.is_video     = false;
+    opusFmtpInfo.is_rtx       = false;
+    opusFmtpInfo.rtx_payload_type = 0;
     offer_sdp_.audio_fmtp_vec_.push_back(opusFmtpInfo);
     //end: audio/video fmtp info
     
     //start: rtcpFb
-    RtcpFbInfo remb = {
-        .payload_type = VPLAYLOAD_DEF_TYPE,
-        .attr_string  = "goog-remb"
-    };
-    offer_sdp_.video_rtcpfb_vec_.push_back(remb);
-
-    RtcpFbInfo transport_cc = {
-        .payload_type = VPLAYLOAD_DEF_TYPE,
-        .attr_string  = "transport-cc"
-    };
-    offer_sdp_.video_rtcpfb_vec_.push_back(transport_cc);
-
-    transport_cc = {
-        .payload_type = APLAYLOAD_DEF_TYPE,
-        .attr_string  = "transport-cc"
-    };
-    offer_sdp_.audio_rtcpfb_vec_.push_back(transport_cc);
-
-    RtcpFbInfo fir = {
-        .payload_type = VPLAYLOAD_DEF_TYPE,
-        .attr_string  = "cmm fir"
-    };
-    offer_sdp_.video_rtcpfb_vec_.push_back(fir);
-
-    RtcpFbInfo nack_fb {
-        .payload_type = VPLAYLOAD_DEF_TYPE,
-        .attr_string  = "nack"
-    };
-    offer_sdp_.video_rtcpfb_vec_.push_back(nack_fb);
-
-    RtcpFbInfo nack_pli {
-        .payload_type = VPLAYLOAD_DEF_TYPE,
-        .attr_string  = "nack pli"
-    };
-    offer_sdp_.video_rtcpfb_vec_.push_back(nack_pli);
+    offer_sdp_.video_rtcpfb_vec_.push_back({VPLAYLOAD_DEF_TYPE, "goog-remb"});
+    offer_sdp_.video_rtcpfb_vec_.push_back({VPLAYLOAD_DEF_TYPE,"transport-cc"});
+    offer_sdp_.audio_rtcpfb_vec_.push_back({APLAYLOAD_DEF_TYPE, "transport-cc"});
+    offer_sdp_.video_rtcpfb_vec_.push_back({VPLAYLOAD_DEF_TYPE, "cmm fir"});
+    offer_sdp_.video_rtcpfb_vec_.push_back({VPLAYLOAD_DEF_TYPE, "nack"});
+    offer_sdp_.video_rtcpfb_vec_.push_back({VPLAYLOAD_DEF_TYPE, "nack pli"});
     //end: rtcpFb
     
     //Start: ssrc info
@@ -316,38 +279,35 @@ std::string PeerConnection::CreateOfferSdp(WebRtcSdpDirection direction_type) {
     LogInfof(logger_, "video ssrc:%u, rtx ssrc:%u",
             offer_sdp_.video_ssrc_,
             offer_sdp_.video_rtx_ssrc_);
-    SSRCInfo video_ssrc_info = {
-        .ssrc = offer_sdp_.video_ssrc_,
-        .is_video = true,
-        .is_rtx   = false,
-        .msid     = offer_sdp_.v_msid_,
-        .msid_appdata = offer_sdp_.v_msid_appdata_,
-        .cname = offer_sdp_.video_cname_,
-        .rtx_ssrc = offer_sdp_.video_rtx_ssrc_
-    };
+    SSRCInfo video_ssrc_info = {};
+    video_ssrc_info.ssrc = offer_sdp_.video_ssrc_;
+    video_ssrc_info.is_video = true;
+    video_ssrc_info.is_rtx   = false;
+    video_ssrc_info.msid     = offer_sdp_.v_msid_;
+    video_ssrc_info.msid_appdata = offer_sdp_.v_msid_appdata_;
+    video_ssrc_info.cname = offer_sdp_.video_cname_;
+    video_ssrc_info.rtx_ssrc = offer_sdp_.video_rtx_ssrc_;
     offer_sdp_.ssrc_info_map_[offer_sdp_.video_ssrc_] = video_ssrc_info;
 
-    SSRCInfo rtx_ssrc_info = {
-        .ssrc = offer_sdp_.video_rtx_ssrc_,
-        .is_video = true,
-        .is_rtx   = true,
-        .msid     = offer_sdp_.v_msid_,
-        .msid_appdata = offer_sdp_.v_msid_appdata_,
-        .cname = offer_sdp_.video_cname_,
-        .rtx_ssrc = offer_sdp_.video_ssrc_
+    SSRCInfo rtx_ssrc_info = {};
+    rtx_ssrc_info.ssrc = offer_sdp_.video_rtx_ssrc_;
+    rtx_ssrc_info.is_video = true;
+    rtx_ssrc_info.is_rtx = true;
+    rtx_ssrc_info.msid = offer_sdp_.v_msid_;
+    rtx_ssrc_info.msid_appdata = offer_sdp_.v_msid_appdata_;
+    rtx_ssrc_info.cname = offer_sdp_.video_cname_;
+    rtx_ssrc_info.rtx_ssrc = offer_sdp_.video_ssrc_;
 
-    };
     offer_sdp_.ssrc_info_map_[offer_sdp_.video_rtx_ssrc_] = rtx_ssrc_info;
 
-    SSRCInfo audio_ssrc_info = {
-        .ssrc = offer_sdp_.audio_ssrc_,
-        .is_video = false,
-        .is_rtx   = false,
-        .msid     = offer_sdp_.a_msid_,
-        .msid_appdata = offer_sdp_.a_msid_appdata_,
-        .cname = offer_sdp_.audio_cname_,
-        .rtx_ssrc = 0
-    };
+    SSRCInfo audio_ssrc_info = {};
+    audio_ssrc_info.ssrc = offer_sdp_.audio_ssrc_;
+    audio_ssrc_info.is_video = false;
+    audio_ssrc_info.is_rtx   = false;
+    audio_ssrc_info.msid     = offer_sdp_.a_msid_;
+    audio_ssrc_info.msid_appdata = offer_sdp_.a_msid_appdata_;
+    audio_ssrc_info.cname = offer_sdp_.audio_cname_;
+    audio_ssrc_info.rtx_ssrc = 0;
     offer_sdp_.ssrc_info_map_[offer_sdp_.audio_ssrc_] = audio_ssrc_info;
     //end: ssrc info
     
@@ -1225,28 +1185,26 @@ uint32_t PeerConnection::GetVideoSsrc(SDP_TYPE type) {
 
 void PeerConnection::SetVideoSsrc(SDP_TYPE type, uint32_t ssrc) {
     if (type == SDP_OFFER) {
-        SSRCInfo video_ssrc_info = {
-            .ssrc         = ssrc,
-            .is_video     = true,
-            .is_rtx       = false,
-            .msid         = offer_sdp_.v_msid_,
-            .msid_appdata = offer_sdp_.v_msid_appdata_,
-            .cname        = offer_sdp_.video_cname_,
-            .rtx_ssrc     = offer_sdp_.video_rtx_ssrc_
-        };
+        SSRCInfo video_ssrc_info = {};
+        video_ssrc_info.ssrc         = ssrc;
+        video_ssrc_info.is_video     = true;
+        video_ssrc_info.is_rtx       = false;
+        video_ssrc_info.msid         = offer_sdp_.v_msid_;
+        video_ssrc_info.msid_appdata = offer_sdp_.v_msid_appdata_;
+        video_ssrc_info.cname        = offer_sdp_.video_cname_;
+        video_ssrc_info.rtx_ssrc     = offer_sdp_.video_rtx_ssrc_;
         offer_sdp_.ssrc_info_map_[ssrc] = video_ssrc_info;
 
         offer_sdp_.video_ssrc_ = ssrc;
     } else {
-        SSRCInfo video_ssrc_info = {
-            .ssrc         = ssrc,
-            .is_video     = true,
-            .is_rtx       = false,
-            .msid         = answer_sdp_.v_msid_,
-            .msid_appdata = answer_sdp_.v_msid_appdata_,
-            .cname        = answer_sdp_.video_cname_,
-            .rtx_ssrc     = answer_sdp_.video_rtx_ssrc_
-        };
+        SSRCInfo video_ssrc_info = {};
+        video_ssrc_info.ssrc = ssrc;
+        video_ssrc_info.is_video     = true;
+        video_ssrc_info.is_rtx       = false;
+        video_ssrc_info.msid         = answer_sdp_.v_msid_;
+        video_ssrc_info.msid_appdata = answer_sdp_.v_msid_appdata_;
+        video_ssrc_info.cname        = answer_sdp_.video_cname_;
+        video_ssrc_info.rtx_ssrc     = answer_sdp_.video_rtx_ssrc_;
         answer_sdp_.ssrc_info_map_[ssrc] = video_ssrc_info;
 
         answer_sdp_.video_ssrc_ = ssrc;
@@ -1262,27 +1220,25 @@ uint32_t PeerConnection::GetVideoRtxSsrc(SDP_TYPE type) {
 
 void PeerConnection::SetVideoRtxSsrc(SDP_TYPE type, uint32_t ssrc) {
     if (type == SDP_OFFER) {
-        SSRCInfo rtx_ssrc_info = {
-            .ssrc         = ssrc,
-            .is_video     = true,
-            .is_rtx       = true,
-            .msid         = offer_sdp_.v_msid_,
-            .msid_appdata = offer_sdp_.v_msid_appdata_,
-            .cname        = offer_sdp_.video_cname_,
-            .rtx_ssrc     = offer_sdp_.video_ssrc_
-        };
+        SSRCInfo rtx_ssrc_info = {};
+        rtx_ssrc_info.ssrc         = ssrc,
+        rtx_ssrc_info.is_video     = true,
+        rtx_ssrc_info.is_rtx       = true,
+        rtx_ssrc_info.msid         = offer_sdp_.v_msid_,
+        rtx_ssrc_info.msid_appdata = offer_sdp_.v_msid_appdata_,
+        rtx_ssrc_info.cname        = offer_sdp_.video_cname_,
+        rtx_ssrc_info.rtx_ssrc     = offer_sdp_.video_ssrc_;
         offer_sdp_.ssrc_info_map_[ssrc] = rtx_ssrc_info;
         offer_sdp_.video_rtx_ssrc_ = ssrc;
     } else {
-        SSRCInfo rtx_ssrc_info = {
-            .ssrc         = ssrc,
-            .is_video     = true,
-            .is_rtx       = true,
-            .msid         = answer_sdp_.v_msid_,
-            .msid_appdata = answer_sdp_.v_msid_appdata_,
-            .cname        = answer_sdp_.video_cname_,
-            .rtx_ssrc     = answer_sdp_.video_ssrc_
-        };
+        SSRCInfo rtx_ssrc_info = {};
+        rtx_ssrc_info.ssrc         = ssrc,
+        rtx_ssrc_info.is_video     = true,
+        rtx_ssrc_info.is_rtx       = true,
+        rtx_ssrc_info.msid         = answer_sdp_.v_msid_,
+        rtx_ssrc_info.msid_appdata = answer_sdp_.v_msid_appdata_,
+        rtx_ssrc_info.cname        = answer_sdp_.video_cname_,
+        rtx_ssrc_info.rtx_ssrc     = answer_sdp_.video_ssrc_;
         answer_sdp_.ssrc_info_map_[ssrc] = rtx_ssrc_info;
         answer_sdp_.video_rtx_ssrc_ = ssrc;
     }
@@ -1297,27 +1253,25 @@ uint32_t PeerConnection::GetAudioSsrc(SDP_TYPE type) {
 
 void PeerConnection::SetAudioSsrc(SDP_TYPE type, uint32_t ssrc) {
     if (type == SDP_OFFER) {
-        SSRCInfo audio_ssrc_info = {
-            .ssrc         = ssrc,
-            .is_video     = false,
-            .is_rtx       = false,
-            .msid         = offer_sdp_.a_msid_,
-            .msid_appdata = offer_sdp_.a_msid_appdata_,
-            .cname        = offer_sdp_.audio_cname_,
-            .rtx_ssrc     = 0
-        };
+        SSRCInfo audio_ssrc_info = {};
+        audio_ssrc_info.ssrc         = ssrc;
+        audio_ssrc_info.is_video     = false;
+        audio_ssrc_info.is_rtx       = false;
+        audio_ssrc_info.msid         = offer_sdp_.a_msid_;
+        audio_ssrc_info.msid_appdata = offer_sdp_.a_msid_appdata_;
+        audio_ssrc_info.cname        = offer_sdp_.audio_cname_;
+        audio_ssrc_info.rtx_ssrc     = 0;
         offer_sdp_.ssrc_info_map_[ssrc] = audio_ssrc_info;
         offer_sdp_.audio_ssrc_ = ssrc;
     } else {
-        SSRCInfo audio_ssrc_info = {
-            .ssrc         = ssrc,
-            .is_video     = false,
-            .is_rtx       = false,
-            .msid         = answer_sdp_.a_msid_,
-            .msid_appdata = answer_sdp_.a_msid_appdata_,
-            .cname        = answer_sdp_.audio_cname_,
-            .rtx_ssrc     = 0
-        };
+        SSRCInfo audio_ssrc_info = {};
+        audio_ssrc_info.ssrc         = ssrc,
+        audio_ssrc_info.is_video     = false,
+        audio_ssrc_info.is_rtx       = false,
+        audio_ssrc_info.msid         = answer_sdp_.a_msid_,
+        audio_ssrc_info.msid_appdata = answer_sdp_.a_msid_appdata_,
+        audio_ssrc_info.cname        = answer_sdp_.audio_cname_,
+        audio_ssrc_info.rtx_ssrc     = 0;
         answer_sdp_.ssrc_info_map_[ssrc] = audio_ssrc_info;
         answer_sdp_.audio_ssrc_ = ssrc;
     }
@@ -1426,12 +1380,7 @@ int PeerConnection::GetAudioPayloadType(SDP_TYPE type) {
 }
 
 void PeerConnection::SetAudioPayloadType(SDP_TYPE type, int payloadType) {
-    RtpMapInfo opusRtpInfo = {
-        .payload_type = payloadType,
-        .codec_type   = "opus",
-        .clock_rate   = 48000,
-        .channel      = 2
-    };
+    RtpMapInfo opusRtpInfo = {payloadType, "opus", 48000, 2};
     if (type == SDP_OFFER) {
         offer_sdp_.audio_rtp_map_infos_[payloadType] = opusRtpInfo;
     } else {

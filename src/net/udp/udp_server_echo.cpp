@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <string>
 #include <sstream>
-#include <unistd.h>
+#include <getopt.h>
 #include <chrono>
 
 using namespace cpp_streamer;

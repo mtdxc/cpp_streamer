@@ -1,8 +1,15 @@
 #ifndef IP_ADDRESS_HPP
 #define IP_ADDRESS_HPP
+
+#ifdef _WIN32
+#include <winsock2.h>  // For Windows socket functions
+#include <ws2tcpip.h> // For inet_ntop(), inet_pton()
+#pragma comment(lib, "ws2_32.lib") // Link with the Winsock library
+#else
 #include <arpa/inet.h>  // htonl(), htons(), ntohl(), ntohs()
 #include <netinet/in.h> // sockaddr_in, sockaddr_in6
 #include <sys/socket.h> // struct sockaddr, struct sockaddr_storage, AF_INET, AF_INET6
+#endif
 #include <string>
 #include <stdint.h>
 #include <stddef.h>

@@ -6,7 +6,12 @@
 #include <stddef.h>
 #include <string>
 #include <sstream>
+#if defined(_WIN32) || defined(_WIN64)
+#include <winsock2.h>
+#pragma comment(lib, "ws2_32.lib") // Link with the Winsock library
+#else
 #include <arpa/inet.h>  // htonl(), htons(), ntohl(), ntohs()
+#endif
 
 namespace cpp_streamer
 {

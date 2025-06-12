@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <string>
 #include <sstream>
-#include <unistd.h>
+#include <getopt.h>
 #include <chrono>
 #include <thread>
 

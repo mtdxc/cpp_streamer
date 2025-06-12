@@ -6,7 +6,7 @@
 #include <cstring>
 
 #include <stdio.h>
-#include <arpa/inet.h>  // htonl(), htons(), ntohl(), ntohs()
+#include <stdint.h>
 
 namespace cpp_streamer
 {

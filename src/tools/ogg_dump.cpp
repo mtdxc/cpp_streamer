@@ -1,7 +1,7 @@
 #include "ogg_demuxer.hpp"
 #include "utils/logger.hpp"
 
-#include <unistd.h>
+#include "getopt.h"
 
 using namespace cpp_streamer;
 

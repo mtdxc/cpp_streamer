@@ -11,7 +11,7 @@
 #include <string>
 #include <stdint.h>
 #include <sstream>
-#include <netdb.h>
+//#include <netdb.h>
 
 namespace cpp_streamer
 {
