@@ -2,16 +2,14 @@
 #include "cpp_streamer_factory.hpp"
 
 #include <iostream>
-#include <uv.h>
-#include <stdint.h>
-#include <stddef.h>
-#include <stdio.h>
 #include <string>
-#include <sstream>
-#include <getopt.h>
-#include <chrono>
-#include <thread>
 #include <memory>
+#include <thread>
+#include <chrono>
+#include <cstdio>
+#include <cstdint>
+#include <getopt.h>
+#include <uv.h>
 
 
 using namespace cpp_streamer;
@@ -21,13 +19,11 @@ static Logger* s_logger = nullptr;
 class Mpegts2MsPushStreamerMgr: public StreamerReport
 {
 public:
-    Mpegts2MsPushStreamerMgr(const std::string& src_ts, 
-            const std::string& output_url):ts_file_(src_ts)
-                                           , dst_url_(output_url)
-    {
+    Mpegts2MsPushStreamerMgr(const char* src_ts, const char* output_url)
+        :ts_file_(src_ts), dst_url_(output_url) {
     }
-    virtual ~Mpegts2MsPushStreamerMgr()
-    {
+
+    virtual ~Mpegts2MsPushStreamerMgr() {
         mspush_ready_ = false;
         thread_ptr_->join();
         thread_ptr_ = nullptr;
@@ -54,8 +50,9 @@ public:
         LogInfof(logger_, "make mspush streamer:%p, name:%s", mspush_streamer_, mspush_streamer_->StreamerName());
         mspush_streamer_->SetLogger(logger_);
         mspush_streamer_->SetReporter(this);
-        LogInfof(logger_, "start network url:%s", dst_url_.c_str());
+
         try {
+            LogInfof(logger_, "start network url:%s", dst_url_.c_str());
             mspush_streamer_->StartNetwork(dst_url_.c_str(), loop_handle);
         } catch(CppStreamException& e) {
             LogErrorf(logger_, "mediasoup push start network exception:%s", e.what());
@@ -198,11 +195,10 @@ int main(int argc, char** argv) {
     CppStreamerFactory::SetLogger(s_logger);
     CppStreamerFactory::SetLibPath("./output/lib");
 
-    LogInfof(s_logger, "mpegts2mspush streamer manager is starting, input mpegts:%s, output mspush url:%s",
-            input_ts_name, output_url_name);
+    LogInfof(s_logger, "mpegts2mspush streamer manager is starting, input mpegts:%s, output mspush url:%s", input_ts_name, output_url_name);
     uv_loop_t* loop = uv_default_loop();
  
-    std::shared_ptr<Mpegts2MsPushStreamerMgr> mgr_ptr = std::make_shared<Mpegts2MsPushStreamerMgr>(input_ts_name, output_url_name);
+    auto mgr_ptr = std::make_shared<Mpegts2MsPushStreamerMgr>(input_ts_name, output_url_name);
 
     mgr_ptr->SetLogger(s_logger);
 

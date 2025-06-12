@@ -3,30 +3,23 @@
 #include "logger.hpp"
 #include "media_packet.hpp"
 
-#include <stdint.h>
-#include <stddef.h>
-#include <stdio.h>
-#include <string>
-#include <sstream>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
 #include <getopt.h>
-#include <chrono>
-#include <thread>
-
+#include <memory>
+#include <iostream>
 
 using namespace cpp_streamer;
 
-
 static Logger* s_logger = nullptr;
-
 
 class FlvDumpMgr : public CppStreamerInterface, public StreamerReport
 {
 public:
-    FlvDumpMgr()
-    {
+    FlvDumpMgr(){
     }
-    virtual ~FlvDumpMgr()
-    {
+    virtual ~FlvDumpMgr() {
         if (flv_demux_streamer_) {
             delete flv_demux_streamer_;
             flv_demux_streamer_ = nullptr;
@@ -80,14 +73,12 @@ public:
         LogInfof(logger_, "packet:%s", pkt_ptr->Dump().c_str());
         if (pkt_ptr->av_type_ == MEDIA_VIDEO_TYPE) {
             if (pkt_ptr->is_seq_hdr_) {
-                LogInfoData(logger_, (uint8_t*)pkt_ptr->buffer_ptr_->Data(), 
-                        pkt_ptr->buffer_ptr_->DataLen(), "video seq data");
+                LogInfoData(logger_, (uint8_t*)pkt_ptr->Data(), pkt_ptr->Size(), "video seq data");
             }
         }
         if (pkt_ptr->av_type_ == MEDIA_AUDIO_TYPE) {
             if (pkt_ptr->is_seq_hdr_) {
-                LogInfoData(logger_, (uint8_t*)pkt_ptr->buffer_ptr_->Data(), 
-                        pkt_ptr->buffer_ptr_->DataLen(), "audio seq data");
+                LogInfoData(logger_, (uint8_t*)pkt_ptr->Data(), pkt_ptr->Size(), "audio seq data");
             }
         }
 
@@ -114,10 +105,10 @@ int main(int argc, char** argv) {
     char input_flv_name[128];
     char log_file[128];
 
-    int opt = 0;
     bool input_flv_name_ready = false;
     bool log_file_ready = false;
 
+    int opt = 0;
     while ((opt = getopt(argc, argv, "i:l:h")) != -1) {
         switch (opt) {
             case 'i': strncpy(input_flv_name, optarg, sizeof(input_flv_name)); input_flv_name_ready = true; break;
@@ -125,9 +116,7 @@ int main(int argc, char** argv) {
             case 'h':
             default: 
             {
-                printf("Usage: %s [-i flv file name]\n\
-    [-l log file name]\n",
-                    argv[0]); 
+                printf("Usage: %s [-i flv file name]\n[-l log file name]\n", argv[0]); 
                 return -1;
             }
         }
@@ -176,7 +165,5 @@ int main(int argc, char** argv) {
     CppStreamerFactory::ReleaseAll();
     
     delete s_logger;
-
-
     return 0;
 }

@@ -3,14 +3,10 @@
 #include "logger.hpp"
 #include "media_packet.hpp"
 
-#include <stdint.h>
-#include <stddef.h>
-#include <stdio.h>
+#include <cstdint>
+#include <cstdio>
 #include <string>
-#include <sstream>
-#include "getopt.h"
-#include <chrono>
-#include <thread>
+#include <getopt.h>
 
 using namespace cpp_streamer;
 
@@ -19,54 +15,54 @@ static Logger* s_logger = nullptr;
 class Flv2FlvStreamerMgr : public CppStreamerInterface, public StreamerReport
 {
 public:
-    Flv2FlvStreamerMgr(const std::string& output_filename):filename_(output_filename)
+    Flv2FlvStreamerMgr(const char* output_filename):filename_(output_filename)
     {
     }
     virtual ~Flv2FlvStreamerMgr()
     {
-        if (flv_demux_streamer_) {
-            delete flv_demux_streamer_;
-            flv_demux_streamer_ = nullptr;
+        if (demux_) {
+            delete demux_;
+            demux_ = nullptr;
         }
-        if (flv_mux_streamer_) {
-            delete flv_mux_streamer_;
-            flv_mux_streamer_ = nullptr;
+        if (muxer_) {
+            delete muxer_;
+            muxer_ = nullptr;
         }
     }
 
 public:
     int MakeStreamers() {
-        flv_demux_streamer_ = CppStreamerFactory::MakeStreamer("flvdemux");
-        if (!flv_demux_streamer_) {
+        demux_ = CppStreamerFactory::MakeStreamer("flvdemux");
+        if (!demux_) {
             LogErrorf(logger_, "make streamer flvdemux error");
             return -1;
         }
-        LogInfof(logger_, "make flv demux streamer:%p, name:%s", flv_demux_streamer_, flv_demux_streamer_->StreamerName());
-        flv_demux_streamer_->SetLogger(logger_);
-        flv_demux_streamer_->SetReporter(this);
+        LogInfof(logger_, "make flv demux streamer:%p, name:%s", demux_, demux_->StreamerName());
+        demux_->SetLogger(logger_);
+        demux_->SetReporter(this);
  
-        flv_mux_streamer_ = CppStreamerFactory::MakeStreamer("flvmux");
-        if (!flv_mux_streamer_) {
+        muxer_ = CppStreamerFactory::MakeStreamer("flvmux");
+        if (!muxer_) {
             LogErrorf(logger_, "make streamer flvmux error");
             return -1;
         }
-        LogInfof(logger_, "make flv mux streamer:%p, name:%s", flv_mux_streamer_, flv_mux_streamer_->StreamerName());
-        flv_mux_streamer_->SetLogger(logger_);
-        flv_mux_streamer_->AddSinker(this);
-        flv_mux_streamer_->SetReporter(this);
-        flv_demux_streamer_->AddSinker(flv_mux_streamer_);
+        LogInfof(logger_, "make flv mux streamer:%p, name:%s", muxer_, muxer_->StreamerName());
+        muxer_->SetLogger(logger_);
+        muxer_->SetReporter(this);
+        demux_->AddSinker(muxer_);
+        muxer_->AddSinker(this);
         return 0;
     }
 
     int InputFlvData(uint8_t* data, size_t data_len) {
-        if (!flv_demux_streamer_) {
+        if (!demux_) {
             LogErrorf(logger_, "flv demux streamer is not ready");
             return -1;
         }
         //LogInfof(logger_, "input data len:%u", data_len);
         Media_Packet_Ptr pkt_ptr = std::make_shared<Media_Packet>();
         pkt_ptr->AppendData(data, data_len);
-        flv_demux_streamer_->SourceData(pkt_ptr);
+        demux_->SourceData(pkt_ptr);
         return 0;
     }
 
@@ -91,7 +87,7 @@ public:
     virtual int SourceData(Media_Packet_Ptr pkt_ptr) override {
         FILE* file_p = fopen(filename_.c_str(), "ab+");
         if (file_p) {
-            fwrite(pkt_ptr->buffer_ptr_->Data(), 1, pkt_ptr->buffer_ptr_->DataLen(), file_p);
+            fwrite(pkt_ptr->Data(), 1, pkt_ptr->Size(), file_p);
             fclose(file_p);
         }
         return 0;
@@ -109,8 +105,8 @@ public:
 private:
     Logger* logger_ = nullptr;
     std::string filename_;
-    CppStreamerInterface* flv_demux_streamer_ = nullptr;
-    CppStreamerInterface* flv_mux_streamer_ = nullptr;
+    CppStreamerInterface* demux_ = nullptr;
+    CppStreamerInterface* muxer_ = nullptr;
 };
 
 int main(int argc, char** argv) {
@@ -118,11 +114,11 @@ int main(int argc, char** argv) {
     char output_flv_name[128];
     char log_file[128];
 
-    int opt = 0;
     bool input_flv_name_ready = false;
     bool output_flv_name_ready = false;
     bool log_file_ready = false;
 
+    int opt = 0;
     while ((opt = getopt(argc, argv, "i:o:l:h")) != -1) {
         switch (opt) {
             case 'i': strncpy(input_flv_name, optarg, sizeof(input_flv_name)); input_flv_name_ready = true; break;
@@ -155,8 +151,8 @@ int main(int argc, char** argv) {
 
     LogInfof(s_logger, "flv2flv streamer manager is starting, input filename:%s, output filename:%s",
             input_flv_name, output_flv_name);
-    auto streamer_mgr_ptr = std::make_shared<Flv2FlvStreamerMgr>(std::string(output_flv_name));
 
+    auto streamer_mgr_ptr = std::make_shared<Flv2FlvStreamerMgr>(output_flv_name);
     streamer_mgr_ptr->SetLogger(s_logger);
     if (streamer_mgr_ptr->MakeStreamers() < 0) {
         LogErrorf(s_logger, "call GenFlvDemuxStreamer error");

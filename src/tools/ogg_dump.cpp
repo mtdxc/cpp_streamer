@@ -10,15 +10,14 @@ static Logger* s_logger = nullptr;
 class FileRead : public IoReaderI
 {
 public:
-    FileRead(const std::string& filename):filename_(filename)
+    FileRead(const char* filename)
     {
-        file_ = fopen(filename.c_str(), "rb");
+        file_ = fopen(filename, "rb");
         if (!file_) {
             CSM_THROW_ERROR("read file exception");
         }
     }
-    virtual ~FileRead()
-    {
+    virtual ~FileRead() {
         fclose(file_);
     }
 public:
@@ -27,18 +26,15 @@ public:
     }
 
 private:
-    std::string filename_;
     FILE* file_ = nullptr;
 };
 
 class OpusDataCallbackImpl : public OpusDataCallbackI
 {
 public:
-    OpusDataCallbackImpl(Logger* logger):logger_(logger)
-    {
+    OpusDataCallbackImpl(Logger* logger):logger_(logger) {
     }
-    ~OpusDataCallbackImpl()
-    {
+    ~OpusDataCallbackImpl() {
     }
 public:
     virtual void OnOpusPacketCallBack(int channel, int sample_rate, const uint8_t* data, size_t len, int64_t dts) override {
@@ -65,9 +61,7 @@ int main(int argc, char** argv) {
             case 'h':
             default: 
             {
-                printf("Usage: %s [-i ogg file name]\n\
-    [-l log file name]\n",
-                    argv[0]); 
+                printf("Usage: %s [-i ogg file name]\n[-l log file name]\n", argv[0]); 
                 return -1;
             }
         }

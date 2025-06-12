@@ -99,9 +99,9 @@ public:
             if (i >= bench_count_) {
                 break;
             }
-            std::string url = GetUrl(i);
-            LogWarnf(logger_, "start network url:%s", url.c_str());
             try {
+                std::string url = GetUrl(i);
+                LogWarnf(logger_, "start network url:%s", url.c_str());
                 whips_[i]->StartNetwork(url.c_str(), loop_);
             } catch(CppStreamException& e) {
                 LogErrorf(logger_, "whip start network exception:%s", e.what());

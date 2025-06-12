@@ -41,19 +41,16 @@ class UdpTuple
 public:
     UdpTuple() {
     }
-    UdpTuple(const std::string& ip, uint16_t udp_port): ip_address(ip)
-        , port(udp_port)
-    {
+    
+    UdpTuple(const std::string& ip, uint16_t udp_port)
+        : ip_address(ip), port(udp_port) {
     }
+
     ~UdpTuple(){
     }
 
     std::string to_string() const {
-        std::string ret = ip_address;
-
-        ret += ":";
-        ret += std::to_string(port);
-        return ret;
+        return ip_address  + ":" + std::to_string(port);
     }
 
 public:
@@ -81,12 +78,8 @@ friend void UdpReadCallback(uv_udp_t* handle,
 friend void UdpSendCallback(uv_udp_send_t* req, int status);
 
 public:
-    UdpSessionBase(uv_loop_t* loop, 
-                UdpSessionCallbackI* cb, 
-                Logger* logger): loop_(loop)
-                                , cb_(cb)
-                                , logger_(logger)
-    {
+    UdpSessionBase(uv_loop_t* loop, UdpSessionCallbackI* cb, Logger* logger)
+        : loop_(loop), cb_(cb), logger_(logger) {
     }
     ~UdpSessionBase()
     {

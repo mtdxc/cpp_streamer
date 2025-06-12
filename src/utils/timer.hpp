@@ -25,7 +25,7 @@ public:
 
 public:
     void StartTimer() {
-        if(running_) {
+        if (running_) {
             return;
         }
         running_ = true;

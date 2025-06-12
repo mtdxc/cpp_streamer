@@ -1,14 +1,12 @@
 #include "cpp_streamer_factory.hpp"
 #include "logger.hpp"
 #include <uv.h>
-#include <stdint.h>
-#include <stddef.h>
-#include <stdio.h>
+#include <cstdio>
+#include <cstring>
 #include <string>
-#include <sstream>
 #include <getopt.h>
-#include <chrono>
-#include <thread>
+#include <memory>
+#include <iostream>
 
 using namespace cpp_streamer;
 
@@ -17,12 +15,10 @@ static Logger* s_logger = nullptr;
 class RtmpPlay2FlvStreamerMgr : public CppStreamerInterface, public StreamerReport
 {
 public:
-    RtmpPlay2FlvStreamerMgr(const std::string& src_url, const std::string& output_flv):src_url_(src_url)
-    , output_flv_(output_flv)
-    {
+    RtmpPlay2FlvStreamerMgr(const char* src_url, const char* output_flv)
+        :src_url_(src_url), output_flv_(output_flv){
     }
-    virtual ~RtmpPlay2FlvStreamerMgr()
-    {
+    virtual ~RtmpPlay2FlvStreamerMgr() {
     }
 
 public:
@@ -71,7 +67,7 @@ public:
         return 0; 
     }
     virtual int SourceData(Media_Packet_Ptr pkt_ptr) override {
-        LogDebugf(logger_, "flv mux output pcket %s", pkt_ptr->Dump().c_str());
+        LogDebugf(logger_, "flv mux output packet %s", pkt_ptr->Dump().c_str());
         FILE* file_p = fopen(output_flv_.c_str(), "ab+");
         if (file_p) {
             fwrite(pkt_ptr->buffer_ptr_->Data(), 1, pkt_ptr->buffer_ptr_->DataLen(), file_p);
@@ -146,8 +142,7 @@ int main(int argc, char** argv) {
     LogInfof(s_logger, "rtmpplay2flv streamer manager is starting, input url:%s, output filename:%s",
             input_url_name, output_flv_name);
     uv_loop_t* loop = uv_default_loop();
-    auto streamer_mgr_ptr = std::make_shared<RtmpPlay2FlvStreamerMgr>(std::string(input_url_name),
-            std::string(output_flv_name));
+    auto streamer_mgr_ptr = std::make_shared<RtmpPlay2FlvStreamerMgr>(input_url_name, output_flv_name);
     streamer_mgr_ptr->SetLogger(s_logger);
 
     if (streamer_mgr_ptr->MakeStreamers(loop) < 0) {

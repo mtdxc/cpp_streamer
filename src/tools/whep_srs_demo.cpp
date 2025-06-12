@@ -2,16 +2,11 @@
 #include "cpp_streamer_factory.hpp"
 
 #include <iostream>
-#include <uv.h>
-#include <stdint.h>
-#include <stddef.h>
-#include <stdio.h>
 #include <string>
-#include <sstream>
+#include <cstdio>
 #include <getopt.h>
-#include <chrono>
-#include <thread>
 #include <memory>
+#include <uv.h>
 
 using namespace cpp_streamer;
 

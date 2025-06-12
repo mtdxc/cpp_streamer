@@ -20,56 +20,54 @@ static Logger* s_logger = nullptr;
 class Ts2FlvStreamerMgr : public CppStreamerInterface, public StreamerReport
 {
 public:
-    Ts2FlvStreamerMgr(const std::string& output_filename):filename_(output_filename)
-    {
+    Ts2FlvStreamerMgr(const char* output_filename):filename_(output_filename) {
     }
-    virtual ~Ts2FlvStreamerMgr()
-    {
-        if (ts_demux_streamer_) {
-            delete ts_demux_streamer_;
-            ts_demux_streamer_ = nullptr;
+    virtual ~Ts2FlvStreamerMgr() {
+        if (demux_) {
+            delete demux_;
+            demux_ = nullptr;
         }
-        if (flv_mux_streamer_) {
-            delete flv_mux_streamer_;
-            flv_mux_streamer_ = nullptr;
+        if (muxer_) {
+            delete muxer_;
+            muxer_ = nullptr;
         }
     }
 
 public:
     int MakeStreamers() {
-        ts_demux_streamer_ = CppStreamerFactory::MakeStreamer("mpegtsdemux");
-        if (!ts_demux_streamer_) {
+        demux_ = CppStreamerFactory::MakeStreamer("mpegtsdemux");
+        if (!demux_) {
             LogErrorf(logger_, "make streamer mpegtsdemux error");
             return -1;
         }
         LogInfof(logger_, "make mpegts demux streamer:%p, name:%s",
-                ts_demux_streamer_, ts_demux_streamer_->StreamerName());
-        ts_demux_streamer_->SetLogger(logger_);
-        ts_demux_streamer_->SetReporter(this);
+                demux_, demux_->StreamerName());
+        demux_->SetLogger(logger_);
+        demux_->SetReporter(this);
  
-        flv_mux_streamer_ = CppStreamerFactory::MakeStreamer("flvmux");
-        if (!flv_mux_streamer_) {
+        muxer_ = CppStreamerFactory::MakeStreamer("flvmux");
+        if (!muxer_) {
             LogErrorf(logger_, "make streamer tsmux error");
             return -1;
         }
         LogInfof(logger_, "make flv mux streamer:%p, name:%s",
-                flv_mux_streamer_, flv_mux_streamer_->StreamerName());
-        flv_mux_streamer_->SetLogger(logger_);
-        flv_mux_streamer_->SetReporter(this);
-        flv_mux_streamer_->AddSinker(this);
+                muxer_, muxer_->StreamerName());
+        muxer_->SetLogger(logger_);
+        muxer_->SetReporter(this);
+        muxer_->AddSinker(this);
 
-        ts_demux_streamer_->AddSinker(flv_mux_streamer_);
+        demux_->AddSinker(muxer_);
         return 0;
     }
 
     int InputTsData(uint8_t* data, size_t data_len) {
-        if (!ts_demux_streamer_) {
+        if (!demux_) {
             LogErrorf(logger_, "ts demux streamer is not ready");
             return -1;
         }
         Media_Packet_Ptr pkt_ptr = std::make_shared<Media_Packet>();
         pkt_ptr->AppendData(data, data_len);
-        ts_demux_streamer_->SourceData(pkt_ptr);
+        demux_->SourceData(pkt_ptr);
         return 0;
     }
 
@@ -112,8 +110,8 @@ public:
 private:
     Logger* logger_ = nullptr;
     std::string filename_;
-    CppStreamerInterface* ts_demux_streamer_ = nullptr;
-    CppStreamerInterface* flv_mux_streamer_ = nullptr;
+    CppStreamerInterface* demux_ = nullptr;
+    CppStreamerInterface* muxer_ = nullptr;
 };
 
 int main(int argc, char** argv) {
@@ -164,7 +162,7 @@ int main(int argc, char** argv) {
     LogInfof(s_logger, "ts2flv streamer manager is starting, input filename:%s, output filename:%s",
             input_ts_name, output_flv_name);
  
-    auto streamer_mgr_ptr = std::make_shared<Ts2FlvStreamerMgr>(std::string(output_flv_name));
+    auto streamer_mgr_ptr = std::make_shared<Ts2FlvStreamerMgr>(output_flv_name);
 
     streamer_mgr_ptr->SetLogger(s_logger);
     if (streamer_mgr_ptr->MakeStreamers() < 0) {

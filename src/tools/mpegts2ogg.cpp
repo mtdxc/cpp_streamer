@@ -2,17 +2,13 @@
 #include "cpp_streamer_factory.hpp"
 #include "logger.hpp"
 #include "media_packet.hpp"
-#include "h264_h265_header.hpp"
 #include "format/ogg/ogg_muxer.hpp"
 
-#include <stdint.h>
-#include <stddef.h>
-#include <stdio.h>
+#include <cstdint>
+#include <cstddef>
+#include <cstdio>
 #include <string>
-#include <sstream>
 #include <getopt.h>
-#include <chrono>
-#include <thread>
 
 using namespace cpp_streamer;
 
@@ -22,12 +18,11 @@ static Logger* s_logger = nullptr;
 class Ts2OggStreamerMgr : public CppStreamerInterface, public StreamerReport, public OggPacketCallbackI
 {
 public:
-    Ts2OggStreamerMgr(const std::string& output_filename):filename_(output_filename)
-                                                        , ogg_muxer_(this, s_logger)
-    {
+    Ts2OggStreamerMgr(const char* output_filename)
+        :filename_(output_filename), ogg_muxer_(this, s_logger) {
     }
-    virtual ~Ts2OggStreamerMgr()
-    {
+
+    virtual ~Ts2OggStreamerMgr() {
         if (ts_demux_streamer_) {
             delete ts_demux_streamer_;
             ts_demux_streamer_ = nullptr;
@@ -83,9 +78,9 @@ public:
         if (pkt_ptr->av_type_ == MEDIA_AUDIO_TYPE) {
             // LogInfof(logger_, "audio data, dts:%ld, channel:%d, sample_rate:%d",
             //         pkt_ptr->dts_, pkt_ptr->channel_, pkt_ptr->sample_rate_);
-            // LogInfoData(logger_, (uint8_t*)pkt_ptr->buffer_ptr_->Data(), pkt_ptr->buffer_ptr_->DataLen(), "audio data");
-            ogg_muxer_.InputPacket((uint8_t*)pkt_ptr->buffer_ptr_->Data(),
-                                pkt_ptr->buffer_ptr_->DataLen(),
+            // LogInfoData(logger_, (uint8_t*)pkt_ptr->Data(), pkt_ptr->Size(), "audio data");
+            ogg_muxer_.InputPacket((uint8_t*)pkt_ptr->Data(),
+                                pkt_ptr->Size(),
                                 pkt_ptr->dts_, 
                                 pkt_ptr->channel_,
                                 48000/*pkt_ptr->sample_rate_*/);
@@ -166,7 +161,7 @@ int main(int argc, char** argv) {
     LogInfof(s_logger, "ts2ogg streamer manager is starting, input filename:%s, output filename:%s",
             input_ts_name, output_ogg_name);
 
-    auto streamer_mgr_ptr = std::make_shared<Ts2OggStreamerMgr>(std::string(output_ogg_name));
+    auto streamer_mgr_ptr = std::make_shared<Ts2OggStreamerMgr>(output_ogg_name);
     streamer_mgr_ptr->SetLogger(s_logger);
     if (streamer_mgr_ptr->MakeStreamers() < 0) {
         LogErrorf(s_logger, "call MakeStreamers error");

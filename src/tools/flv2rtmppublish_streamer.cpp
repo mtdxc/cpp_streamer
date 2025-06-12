@@ -18,11 +18,10 @@ static Logger* s_logger = nullptr;
 class Flv2RtmpPublishStreamerMgr : public StreamerReport
 {
 public:
-    Flv2RtmpPublishStreamerMgr(const std::string& src_flv, 
-            const std::string& output_url):src_flv_(src_flv)
-                                           , dst_url_(output_url)
-    {
+    Flv2RtmpPublishStreamerMgr(const char* src_flv, const char* output_url)
+        :src_flv_(src_flv), dst_url_(output_url) {
     }
+
     virtual ~Flv2RtmpPublishStreamerMgr()
     {
         rtmp_ready_ = false;
@@ -37,8 +36,7 @@ public:
             LogErrorf(logger_, "make streamer flvdemux error");
             return -1;
         }
-        LogInfof(logger_, "make flv demux streamer:%p, name:%s", 
-                flvdemux_streamer_, flvdemux_streamer_->StreamerName());
+        LogInfof(logger_, "make flv demux streamer:%p, name:%s", flvdemux_streamer_, flvdemux_streamer_->StreamerName());
         flvdemux_streamer_->SetLogger(logger_);
         flvdemux_streamer_->AddOption("re", "true");
         flvdemux_streamer_->SetReporter(this);
@@ -150,11 +148,11 @@ int main(int argc, char** argv) {
     char output_url_name[128];
     char log_file[128];
 
-    int opt = 0;
     bool input_flv_name_ready = false;
     bool output_url_name_ready = false;
     bool log_file_ready = false;
 
+    int opt = 0;
     while ((opt = getopt(argc, argv, "i:o:l:h")) != -1) {
         switch (opt) {
             case 'i': strncpy(input_flv_name, optarg, sizeof(input_flv_name)); input_flv_name_ready = true; break;
@@ -177,7 +175,6 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-
     s_logger = new Logger();
     if (log_file_ready) {
         s_logger->SetFilename(log_file);
@@ -186,14 +183,12 @@ int main(int argc, char** argv) {
     CppStreamerFactory::SetLogger(s_logger);
     CppStreamerFactory::SetLibPath("./output/lib");
 
-
     LogInfof(s_logger, "flv2rtmppublish streamer manager is starting, input flv:%s, output rtmp url:%s",
             input_flv_name, output_url_name);
      uv_loop_t* loop = uv_default_loop();
-    auto streamer_mgr_ptr = std::make_shared<Flv2RtmpPublishStreamerMgr>(std::string(input_flv_name),
-            std::string(output_url_name));
-    streamer_mgr_ptr->SetLogger(s_logger);
 
+    auto streamer_mgr_ptr = std::make_shared<Flv2RtmpPublishStreamerMgr>(input_flv_name, output_url_name);
+    streamer_mgr_ptr->SetLogger(s_logger);
     if (streamer_mgr_ptr->MakeStreamers(loop) < 0) {
         LogErrorf(s_logger, "call flv2rtmppublish streamer error");
         return -1;

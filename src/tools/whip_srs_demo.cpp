@@ -20,13 +20,10 @@ static Logger* s_logger = nullptr;
 class Mpegts2WhipStreamerMgr: public StreamerReport
 {
 public:
-    Mpegts2WhipStreamerMgr(const std::string& src_ts, 
-            const std::string& output_url):ts_file_(src_ts)
-                                           , dst_url_(output_url)
-    {
+    Mpegts2WhipStreamerMgr(const char* src_ts, const char* output_url)
+        :ts_file_(src_ts) , dst_url_(output_url) {
     }
-    virtual ~Mpegts2WhipStreamerMgr()
-    {
+    virtual ~Mpegts2WhipStreamerMgr() {
         whip_ready_ = false;
         thread_ptr_->join();
         thread_ptr_ = nullptr;
@@ -53,8 +50,9 @@ public:
         //LogInfof(logger_, "make whip streamer:%p, name:%s", whip_streamer_, whip_streamer_->StreamerName().c_str());
         whip_streamer_->SetLogger(logger_);
         whip_streamer_->SetReporter(this);
-        LogInfof(logger_, "start network url:%s", dst_url_.c_str());
+
         try {
+            LogInfof(logger_, "start network url:%s", dst_url_.c_str());
             whip_streamer_->StartNetwork(dst_url_.c_str(), loop_handle);
         } catch(CppStreamException& e) {
             LogErrorf(logger_, "whip start network exception:%s", e.what());
@@ -201,10 +199,8 @@ int main(int argc, char** argv) {
             input_ts_name, output_url_name);
     uv_loop_t* loop = uv_default_loop();
  
-    std::shared_ptr<Mpegts2WhipStreamerMgr> mgr_ptr = std::make_shared<Mpegts2WhipStreamerMgr>(input_ts_name, output_url_name);
-
+    auto mgr_ptr = std::make_shared<Mpegts2WhipStreamerMgr>(input_ts_name, output_url_name);
     mgr_ptr->SetLogger(s_logger);
-
     if (mgr_ptr->MakeStreamers(loop) < 0) {
         LogErrorf(s_logger, "call mpegts2whip streamer error");
         return -1;

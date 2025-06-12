@@ -3,17 +3,13 @@
 #include "timer.hpp"
 
 #include <iostream>
-#include <uv.h>
-#include <stdint.h>
-#include <stddef.h>
-#include <stdio.h>
 #include <string>
-#include <sstream>
-#include <getopt.h>
-#include <chrono>
-#include <thread>
-#include <memory>
 #include <vector>
+#include <memory>
+#include <getopt.h>
+#include <uv.h>
+#include <cstdio>
+#include <cstdlib>
 
 using namespace cpp_streamer;
 
@@ -24,15 +20,10 @@ static const size_t WHEPS_INTERVAL = 10;
 class MediasoupPulls: public StreamerReport, public TimerInterface, public CppStreamerInterface
 {
 public:
-    MediasoupPulls(uv_loop_t* loop,
-            const std::string& src_url,
-            size_t bench_count):TimerInterface(loop, 500)
-                            , src_url_(src_url)
-                            , bench_count_(bench_count)
-    {
+    MediasoupPulls(uv_loop_t* loop, const std::string& src_url, size_t bench_count)
+        :TimerInterface(loop, 500) , src_url_(src_url), bench_count_(bench_count) {
     }
-    virtual ~MediasoupPulls()
-    {
+    virtual ~MediasoupPulls() {
         Stop();
     }
 
@@ -79,8 +70,8 @@ public://CppStreamerInterface
     }
 
 
-//TimerInterface
 protected:
+    //TimerInterface
     virtual void OnTimer() override {
         StartWheps();
     }
@@ -90,12 +81,12 @@ public:
         loop_ = loop_handle;
 
         for (size_t i = 0; i < bench_count_; i++) {
-            CppStreamerInterface* mediasoup_puller = CppStreamerFactory::MakeStreamer("mspull");
-            mediasoup_puller->SetLogger(logger_);
-            mediasoup_puller->SetReporter(this);
-            mediasoup_puller->AddSinker(this);
+            CppStreamerInterface* puller = CppStreamerFactory::MakeStreamer("mspull");
+            puller->SetLogger(logger_);
+            puller->SetReporter(this);
+            puller->AddSinker(this);
 
-            mediasoup_puller_vec.push_back(mediasoup_puller);
+            puller_vec.push_back(puller);
         }
 
         return 0;
@@ -108,21 +99,22 @@ private:
         url += std::to_string(index);
         return url;
     }
+
     void StartWheps() {
         if (post_done_) {
             return;
         }
 
-        LogWarnf(logger_, "StartWheps  index:%lu", whep_index_);
+        LogWarnf(logger_, "StartWheps index:%lu", whep_index_);
         size_t i = 0;
-        for (i = whep_index_; i < whep_index_ + WHEPS_INTERVAL;i++) {
+        for (i = whep_index_; i < whep_index_ + WHEPS_INTERVAL; i++) {
             if (i >= bench_count_) {
                 break;
             }
-            std::string url = GetUrl(i);
-            LogWarnf(logger_, "start network url:%s", url.c_str());
             try {
-                mediasoup_puller_vec[i]->StartNetwork(url.c_str(), loop_);
+                std::string url = GetUrl(i);
+                LogWarnf(logger_, "start network url:%s", url.c_str());
+                puller_vec[i]->StartNetwork(url.c_str(), loop_);
             } catch(CppStreamException& e) {
                 LogErrorf(logger_, "mediasoup pull start network exception:%s", e.what());
             }
@@ -135,14 +127,9 @@ private:
 
 private:
     int GetWhipIndex(const std::string& name) {
-        int index = -1;
-        for (CppStreamerInterface* whip : mediasoup_puller_vec) {
-            index++;
-            if (!whip) {
-                continue;
-            }
-            if (whip->StreamerName() == name) {
-                return index;
+        for (int i =0; i<puller_vec.size(); i++) {
+            if (puller_vec[i] && puller_vec[i]->StreamerName() == name) {
+                return i;
             }
         }
         return -1;
@@ -166,10 +153,10 @@ protected:
 protected:
     void Clean() {
         for (size_t i = 0; i < bench_count_; i++) {
-            CppStreamerInterface* mediasoup_puller = mediasoup_puller_vec[i];
-            if (mediasoup_puller) {
-                delete mediasoup_puller;
-                mediasoup_puller_vec[i] = nullptr;
+            CppStreamerInterface* puller = puller_vec[i];
+            if (puller) {
+                delete puller;
+                puller_vec[i] = nullptr;
             }
         }
         uv_loop_close(loop_);
@@ -185,7 +172,7 @@ private:
 
 private:
     Logger* logger_ = nullptr;
-    std::vector<CppStreamerInterface*> mediasoup_puller_vec;
+    std::vector<CppStreamerInterface*> puller_vec;
 };
 /*
  *./mediasoup_pull_bench -i "https://xxxxx.com.cn:4443?roomId=100&apid=7689e48c-09ae-48ca-8973-ad5de69de5e8&vpid=aadbbb0b-2e4e-4ed8-8bd6-22e3c50b9fc1" -l 1.log

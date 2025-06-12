@@ -2,16 +2,11 @@
 #include "cpp_streamer_factory.hpp"
 
 #include <iostream>
-#include <uv.h>
-#include <stdint.h>
-#include <stddef.h>
-#include <stdio.h>
 #include <string>
-#include <sstream>
-#include <getopt.h>
-#include <chrono>
-#include <thread>
 #include <memory>
+#include <getopt.h>
+#include <stdio.h>
+#include <uv.h>
 
 using namespace cpp_streamer;
 
@@ -20,13 +15,10 @@ static Logger* s_logger = nullptr;
 class MsPull2MpegtsStreamerMgr: public StreamerReport, public CppStreamerInterface
 {
 public:
-    MsPull2MpegtsStreamerMgr(const std::string& src_url, 
-            const std::string& output_ts):ts_file_(output_ts)
-                                           , src_url_(src_url)
-    {
+    MsPull2MpegtsStreamerMgr(const char* src_url, const char* output_ts)
+        :ts_file_(output_ts), src_url_(src_url) {
     }
-    virtual ~MsPull2MpegtsStreamerMgr()
-    {
+    virtual ~MsPull2MpegtsStreamerMgr() {
         mspull_ready_ = false;
     }
 
@@ -54,8 +46,8 @@ public:
     }
 
     void Start() {
-        LogInfof(logger_, "start network url:%s", src_url_.c_str());
         try {
+            LogInfof(logger_, "start network url:%s", src_url_.c_str());
             mspull_streamer_->StartNetwork(src_url_.c_str(), loop_);
         } catch(CppStreamException& e) {
             LogErrorf(logger_, "mspull start network exception:%s", e.what());
@@ -95,17 +87,13 @@ public:
             fwrite(pkt_ptr->buffer_ptr_->Data(), 1, pkt_ptr->buffer_ptr_->DataLen(), file_p);
             fclose(file_p);
         }
-
         return 0;
     }
     virtual void StartNetwork(const char* url, void* loop_handle) override {
-
     }
     virtual void AddOption(const char* key, const char* value) override {
-
     }
     virtual void SetReporter(StreamerReport* reporter) override {
-
     }
 
 
@@ -166,14 +154,11 @@ int main(int argc, char** argv) {
     CppStreamerFactory::SetLogger(s_logger);
     CppStreamerFactory::SetLibPath("./output/lib");
 
-    LogInfof(s_logger, "mspull2mpegts streamer manager is starting, input mspull:%s, output mpegts:%s",
-            input_url_name, output_ts_name);
+    LogInfof(s_logger, "mspull2mpegts streamer manager is starting, input mspull:%s, output mpegts:%s", input_url_name, output_ts_name);
     uv_loop_t* loop = uv_default_loop();
 
     std::shared_ptr<MsPull2MpegtsStreamerMgr> mgr_ptr = std::make_shared<MsPull2MpegtsStreamerMgr>(input_url_name, output_ts_name);
-
     mgr_ptr->SetLogger(s_logger);
-
     if (mgr_ptr->MakeStreamers(loop) < 0) {
         LogErrorf(s_logger, "call mspull2mpegts streamer error");
         return -1;

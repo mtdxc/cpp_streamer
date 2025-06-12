@@ -93,16 +93,15 @@ public:
             return;
         }
 
-        LogWarnf(logger_, "StartWhips whip index:%lu",
-                whip_index_);
+        LogWarnf(logger_, "StartWhips whip index:%lu", whip_index_);
         size_t i = 0;
-        for (i = whip_index_; i < whip_index_ + WHIPS_INTERVAL;i++) {
+        for (i = whip_index_; i < whip_index_ + WHIPS_INTERVAL; i++) {
             if (i >= bench_count_) {
                 break;
             }
-            std::string url = GetUrl(i);
-            LogWarnf(logger_, "start network url:%s", url.c_str());
             try {
+                std::string url = GetUrl(i);
+                LogWarnf(logger_, "start network url:%s", url.c_str());
                 mediasoup_pusher_vec[i]->StartNetwork(url.c_str(), loop_);
             } catch(CppStreamException& e) {
                 LogErrorf(logger_, "mediasoup push start network exception:%s", e.what());
@@ -133,14 +132,10 @@ public:
 
 private:
     int GetWhipIndex(const std::string& name) {
-        int index = -1;
-        for (CppStreamerInterface* whip : mediasoup_pusher_vec) {
-            index++;
-            if (!whip) {
-                continue;
-            }
-            if (whip->StreamerName() == name) {
-                return index;
+        for (int i = 0; i < mediasoup_pusher_vec.size(); i++) {
+            auto whip = mediasoup_pusher_vec[i];
+            if (whip && whip->StreamerName() == name) {
+                return i;
             }
         }
         return -1;
@@ -323,18 +318,16 @@ int main(int argc, char** argv) {
     CppStreamerFactory::SetLogger(s_logger);
     CppStreamerFactory::SetLibPath("./output/lib");
 
-
     LogInfof(s_logger, "mpegts2whip bench is starting, input mpegts:%s, output whip bash url:%s, bench count:%d",
             input_ts_name, output_url_name, bench_count);
     uv_loop_t* loop = uv_default_loop();
  
-    std::shared_ptr<Mpegts2MediaSoupPushs> mgr_ptr = std::make_shared<Mpegts2MediaSoupPushs>(loop, 
+    auto mgr_ptr = std::make_shared<Mpegts2MediaSoupPushs>(loop, 
             input_ts_name, 
             output_url_name, 
             (size_t)bench_count);
 
     mgr_ptr->SetLogger(s_logger);
-
     if (mgr_ptr->MakeStreamers(loop) < 0) {
         LogErrorf(s_logger, "call mpegts to whip bench error");
         return -1;

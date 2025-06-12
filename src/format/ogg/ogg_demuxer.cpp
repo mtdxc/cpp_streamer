@@ -9,16 +9,12 @@ using json = nlohmann::json;
 namespace cpp_streamer
 {
 
-OggDemuxer::OggDemuxer(IoReaderI* io_reader, OpusDataCallbackI* cb, Logger* logger):io_reader_(io_reader)
-                                                            , cb_(cb)
-                                                            , logger_(logger)
-{
+OggDemuxer::OggDemuxer(IoReaderI* io_reader, OpusDataCallbackI* cb, Logger* logger)
+    :io_reader_(io_reader), cb_(cb), logger_(logger) {
 }
 
-OggDemuxer::~OggDemuxer()
-{
+OggDemuxer::~OggDemuxer() {
 }
-
 
 int OggDemuxer::Demux() {
     std::vector<uint8_t> header_buffer(OGG_PAGE_HEADER_SIZE);

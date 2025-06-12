@@ -20,11 +20,8 @@ static Logger* s_logger = nullptr;
 class MpegTsDump : public CppStreamerInterface, public StreamerReport
 {
 public:
-    MpegTsDump()
-    {
-    }
-    virtual ~MpegTsDump()
-    {
+    MpegTsDump(){}
+    virtual ~MpegTsDump() {
         if (ts_demux_streamer_) {
             delete ts_demux_streamer_;
             ts_demux_streamer_ = nullptr;
@@ -86,7 +83,6 @@ public:
         return;
     }
     virtual void SetReporter(StreamerReport* reporter) override {
-
     }
 
 private:
@@ -109,9 +105,7 @@ int main(int argc, char** argv) {
             case 'h':
             default: 
             {
-                printf("Usage: %s [-i mpegts file name]\n\
-    [-l log file name]\n",
-                    argv[0]); 
+                printf("Usage: %s [-i mpegts file name]\n\[-l log file name]\n", argv[0]); 
                 return -1;
             }
         }
@@ -130,8 +124,7 @@ int main(int argc, char** argv) {
     CppStreamerFactory::SetLogger(s_logger);
     CppStreamerFactory::SetLibPath("./output/lib");
 
-    LogInfof(s_logger, "mpegts dump is starting, input filename:%s",
-            input_ts_name);
+    LogInfof(s_logger, "mpegts dump is starting, input filename:%s", input_ts_name);
  
     auto streamer_mgr_ptr = std::make_shared<MpegTsDump>();
 

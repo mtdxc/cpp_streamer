@@ -350,7 +350,7 @@ class PmtInfo {
         unsigned short _PCR_PID:13;
         unsigned short _reserved4:4;
         unsigned short _program_info_length:12;
-        unsigned char  _dscr[4096];
+        unsigned char  _dscr[4096] = {0};
 
         std::map<unsigned short, unsigned char> _pid2steamtype;
         std::vector<STREAM_PID_INFO> _stream_pid_vec;

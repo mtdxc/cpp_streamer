@@ -12,8 +12,7 @@
 #define MP4_DEMUX_NAME "mp4demux"
 
 void* make_mp4demux_streamer() {
-    cpp_streamer::Mp4Demuxer* demuxer = new cpp_streamer::Mp4Demuxer();
-    return demuxer;
+    return new cpp_streamer::Mp4Demuxer();
 }
 
 void destroy_mp4demux_streamer(void* streamer) {
@@ -98,7 +97,7 @@ int Mp4Demuxer::AddSinker(CppStreamerInterface* sinker) {
 }
 
 int Mp4Demuxer::RemoveSinker(const char* name) {
-    return 0;
+    return sinkers_.erase(name);
 }
 
 void Mp4Demuxer::OnRead() {

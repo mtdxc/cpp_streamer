@@ -14,21 +14,18 @@
 
 using namespace cpp_streamer;
 
-
 static Logger* s_logger = nullptr;
 
 class Mp4FileReader : public IoReadInterface
 {
 public:
-    Mp4FileReader(const std::string& filename):filename_(filename)
-    {
-        file_ = fopen(filename_.c_str(), "rb");
+    Mp4FileReader(const char* filename):filename_(filename) {
+        file_ = fopen(filename, "rb");
         if (!file_) {
-            CSM_THROW_ERROR("mp4 read file error:%s", filename.c_str());
+            CSM_THROW_ERROR("mp4 read file error:%s", filename);
         }
     }
-    virtual ~Mp4FileReader()
-    {
+    virtual ~Mp4FileReader() {
         if (file_) {
             fclose(file_);
             file_ = nullptr;
@@ -37,14 +34,12 @@ public:
 public:
     virtual int Read(size_t offset, uint8_t* data_buffer, size_t data_buffer_len) override {        
         int ret = -1;
-
         if (!file_) {
             return ret;
         }
 
         fseek(file_, offset, 0);
         ret = fread(data_buffer, 1, data_buffer_len, file_);
-
         return ret;
     }
 
@@ -56,15 +51,13 @@ private:
 class Mp4DumpMgr : public CppStreamerInterface, public StreamerReport
 {
 public:
-    Mp4DumpMgr(const std::string& filename)
-    {
+    Mp4DumpMgr(const char* filename) {
         file_reader_ = new Mp4FileReader(filename);
     }
-    virtual ~Mp4DumpMgr()
-    {
-        if (mp4_demux_streamer_) {
-            delete mp4_demux_streamer_;
-            mp4_demux_streamer_ = nullptr;
+    virtual ~Mp4DumpMgr() {
+        if (demux_) {
+            delete demux_;
+            demux_ = nullptr;
         }
         if (file_reader_) {
             delete file_reader_;
@@ -74,28 +67,27 @@ public:
 
 public:
     int MakeStreamers() {
-        mp4_demux_streamer_ = CppStreamerFactory::MakeStreamer("mp4demux");
-        if (!mp4_demux_streamer_) {
+        demux_ = CppStreamerFactory::MakeStreamer("mp4demux");
+        if (!demux_) {
             LogErrorf(logger_, "make streamer mp4demux error");
             return -1;
         }
-        LogInfof(logger_, "make mp4 demux streamer:%p, name:%s", mp4_demux_streamer_, mp4_demux_streamer_->StreamerName());
-        mp4_demux_streamer_->SetLogger(logger_);
-        mp4_demux_streamer_->SetReporter(this);
-        mp4_demux_streamer_->AddSinker(this);
-        mp4_demux_streamer_->AddOption("box_detail", "true");
+        LogInfof(logger_, "make mp4 demux streamer:%p, name:%s", demux_, demux_->StreamerName());
+        demux_->SetLogger(logger_);
+        demux_->SetReporter(this);
+        demux_->AddSinker(this);
+        demux_->AddOption("box_detail", "true");
         return 0;
     }
 
     void Start() {
-        if (!mp4_demux_streamer_) {
+        if (!demux_) {
             LogErrorf(logger_, "mp4 demux streamer is not ready");
             return;
         }
         Media_Packet_Ptr pkt_ptr = std::make_shared<Media_Packet>();
         pkt_ptr->io_reader_ = file_reader_;
-
-        mp4_demux_streamer_->SourceData(pkt_ptr);
+        demux_->SourceData(pkt_ptr);
     }
 
 public:
@@ -193,7 +185,7 @@ private:
     }
 private:
     Logger* logger_ = nullptr;
-    CppStreamerInterface* mp4_demux_streamer_ = nullptr;
+    CppStreamerInterface* demux_ = nullptr;
     Mp4FileReader* file_reader_ = nullptr;
 };
 
@@ -250,7 +242,5 @@ int main(int argc, char** argv) {
     CppStreamerFactory::ReleaseAll();
     
     delete s_logger;
-
-
     return 0;
 }

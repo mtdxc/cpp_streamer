@@ -19,11 +19,11 @@ static Logger* s_logger = nullptr;
 class Mp4FileReader : public IoReadInterface
 {
 public:
-    Mp4FileReader(const std::string& filename):filename_(filename)
+    Mp4FileReader(const char* filename):filename_(filename)
     {
-        file_ = fopen(filename_.c_str(), "rb");
+        file_ = fopen(filename, "rb");
         if (!file_) {
-            CSM_THROW_ERROR("mp4 read file error:%s", filename.c_str());
+            CSM_THROW_ERROR("mp4 read file error:%s", filename);
         }
     }
     virtual ~Mp4FileReader()
@@ -36,14 +36,12 @@ public:
 public:
     virtual int Read(size_t offset, uint8_t* data_buffer, size_t data_buffer_len) override {        
         int ret = -1;
-
         if (!file_) {
             return ret;
         }
 
         fseek(file_, offset, 0);
         ret = fread(data_buffer, 1, data_buffer_len, file_);
-
         return ret;
     }
 
@@ -55,12 +53,10 @@ private:
 class Mp4toFlvStreamerMgr : public CppStreamerInterface, public StreamerReport
 {
 public:
-    Mp4toFlvStreamerMgr(const std::string& in_filename, const std::string& output_filename):filename_(output_filename)
-    {
+    Mp4toFlvStreamerMgr(const char* in_filename, const char* output_filename):filename_(output_filename) {
         reader_ = new Mp4FileReader(in_filename);
     }
-    virtual ~Mp4toFlvStreamerMgr()
-    {
+    virtual ~Mp4toFlvStreamerMgr() {
         if (mp4_demux_streamer_) {
             delete mp4_demux_streamer_;
             mp4_demux_streamer_ = nullptr;
@@ -132,7 +128,7 @@ public:
     virtual int SourceData(Media_Packet_Ptr pkt_ptr) override {
         FILE* file_p = fopen(filename_.c_str(), "ab+");
         if (file_p) {
-            fwrite(pkt_ptr->buffer_ptr_->Data(), 1, pkt_ptr->buffer_ptr_->DataLen(), file_p);
+            fwrite(pkt_ptr->Data(), 1, pkt_ptr->Size(), file_p);
             fclose(file_p);
         }
         return 0;
@@ -197,9 +193,7 @@ int main(int argc, char** argv) {
 
     LogInfof(s_logger, "mp4 to flv streamer manager is starting, input filename:%s, output filename:%s",
             input_mp4_name, output_flv_name);
-    auto streamer_mgr_ptr = std::make_shared<Mp4toFlvStreamerMgr>(
-        std::string(input_mp4_name),
-        std::string(output_flv_name));
+    auto streamer_mgr_ptr = std::make_shared<Mp4toFlvStreamerMgr>(input_mp4_name, output_flv_name);
 
     streamer_mgr_ptr->SetLogger(s_logger);
     if (streamer_mgr_ptr->MakeStreamers() < 0) {

@@ -3,16 +3,13 @@
 #include "timer.hpp"
 
 #include <iostream>
-#include <uv.h>
-#include <stdint.h>
-#include <stddef.h>
-#include <stdio.h>
 #include <string>
-#include <sstream>
-#include <getopt.h>
-#include <chrono>
-#include <thread>
+#include <vector>
 #include <memory>
+#include <getopt.h>
+#include <uv.h>
+#include <cstdlib>
+#include <cstdio>
 
 using namespace cpp_streamer;
 
@@ -22,27 +19,22 @@ static size_t WHEPS_INTERVAL = 10;
 class WhepBench: public StreamerReport, public TimerInterface, public CppStreamerInterface
 {
 public:
-    WhepBench(uv_loop_t* loop, const std::string& src_url, 
-            int bench_count):TimerInterface(loop, 500)
-                            , bench_count_(bench_count)
-                            , src_url_(src_url)
-    {
+    WhepBench(uv_loop_t* loop, const char* src_url, int bench_count)
+        :TimerInterface(loop, 500), bench_count_(bench_count), src_url_(src_url) {
         loop_ = loop;
     }
-    virtual ~WhepBench()
-    {
+    virtual ~WhepBench() {
         whep_ready_ = false;
         StopTimer();
     }
 
     int MakeStreamers() {
         for (size_t i = 0; i < bench_count_; i++) {
-            CppStreamerInterface* mediasoup_puller = CppStreamerFactory::MakeStreamer("whep");
-            mediasoup_puller->SetLogger(logger_);
-            mediasoup_puller->SetReporter(this);
-            mediasoup_puller->AddSinker(this);
-
-            srs_whep_vec.push_back(mediasoup_puller);
+            CppStreamerInterface* whep = CppStreamerFactory::MakeStreamer("whep");
+            whep->SetLogger(logger_);
+            whep->SetReporter(this);
+            whep->AddSinker(this);
+            srs_whep_vec.push_back(whep);
         }
 
         return 0;
@@ -116,15 +108,15 @@ private:
             return;
         }
 
-        LogWarnf(logger_, "StartWheps  index:%lu", whep_index_);
+        LogWarnf(logger_, "StartWheps index:%lu", whep_index_);
         size_t i = 0;
         for (i = whep_index_; i < whep_index_ + WHEPS_INTERVAL; i++) {
             if (i >= bench_count_) {
                 break;
             }
-            std::string url = GetUrl(i);
-            LogWarnf(logger_, "start network url:%s", url.c_str());
             try {
+                std::string url = GetUrl(i);
+                LogWarnf(logger_, "start network url:%s", url.c_str());
                 srs_whep_vec[i]->StartNetwork(url.c_str(), loop_);
             } catch(CppStreamException& e) {
                 LogErrorf(logger_, "mediasoup pull start network exception:%s", e.what());
@@ -143,14 +135,10 @@ private:
         return url;
     }
     int GetWhepIndex(const std::string& name) {
-        int index = -1;
-        for (CppStreamerInterface* whep : srs_whep_vec) {
-            index++;
-            if (!whep) {
-                continue;
-            }
-            if (whep->StreamerName() == name) {
-                return index;
+        for (int i =0; i < srs_whep_vec.size(); i++) {
+            auto whep = srs_whep_vec[i];
+            if (whep && whep->StreamerName() == name) {
+                return i;
             }
         }
         return -1;
