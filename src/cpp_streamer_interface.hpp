@@ -7,11 +7,23 @@
 #include <stddef.h>
 #include <string.h>
 #include <map>
+#undef STREAMER_API
+#if defined(_WIN32)
+#if defined(QKIDS_EXPORT)
+#define STREAMER_API _declspec(dllexport)
+#else
+#define STREAMER_API _declspec(dllimport)
+#endif
+//#define STREAMER_API
+#define strcasecmp _stricmp
+#else
+#define STREAMER_API __attribute__((visibility("default")))
+#endif
 
 namespace cpp_streamer
 {
 
-class StreamerReport
+STREAMER_API class StreamerReport
 {
 public:
     StreamerReport() = default;
@@ -23,7 +35,7 @@ public:
             const std::string& value) = 0;
 };
 
-class CppStreamerInterface
+STREAMER_API class CppStreamerInterface
 {
 public:
     CppStreamerInterface() = default;

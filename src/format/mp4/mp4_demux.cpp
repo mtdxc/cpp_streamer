@@ -13,13 +13,11 @@
 
 void* make_mp4demux_streamer() {
     cpp_streamer::Mp4Demuxer* demuxer = new cpp_streamer::Mp4Demuxer();
-
     return demuxer;
 }
 
 void destroy_mp4demux_streamer(void* streamer) {
     cpp_streamer::Mp4Demuxer* demuxer = (cpp_streamer::Mp4Demuxer*)streamer;
-
     delete demuxer;
 }
 

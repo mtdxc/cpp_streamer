@@ -14,17 +14,12 @@
 #include <mutex>
 
 extern "C" {
-void* make_rtmppublish_streamer();
-void destroy_rtmppublish_streamer(void* streamer);
+STREAMER_API void* make_rtmppublish_streamer();
+STREAMER_API void destroy_rtmppublish_streamer(void* streamer);
 }
 
 namespace cpp_streamer
 {
-
-extern "C" {
-void* make_rtmppublish_streamer();
-void destroy_rtmppublish_streamer(void* streamer);
-}
 
 class RtmpPublish : public CppStreamerInterface, public RtmpClientDataCallbackI, public RtmpClientCtrlCallbackI
 {

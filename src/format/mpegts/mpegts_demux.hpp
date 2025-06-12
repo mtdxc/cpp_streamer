@@ -12,8 +12,8 @@
 
 extern "C"
 {
-void* make_mpegtsdemux_streamer();
-void destroy_mpegtsdemux_streamer(void* streamer);
+STREAMER_API void* make_mpegtsdemux_streamer();
+STREAMER_API void destroy_mpegtsdemux_streamer(void* streamer);
 }
 
 namespace cpp_streamer

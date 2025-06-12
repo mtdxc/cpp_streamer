@@ -8,8 +8,8 @@
 #include <mutex>
 
 extern "C" {
-void* make_whip_streamer();
-void destroy_whip_streamer(void* streamer);
+STREAMER_API void* make_whip_streamer();
+STREAMER_API void destroy_whip_streamer(void* streamer);
 }
 
 namespace cpp_streamer

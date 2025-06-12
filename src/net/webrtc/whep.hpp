@@ -7,8 +7,8 @@
 #include "media_callback_interface.hpp"
 #
 extern "C" {
-void* make_whep_streamer();
-void destroy_whep_streamer(void* streamer);
+STREAMER_API void* make_whep_streamer();
+STREAMER_API void destroy_whep_streamer(void* streamer);
 }
 
 namespace cpp_streamer

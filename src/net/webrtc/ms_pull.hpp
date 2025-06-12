@@ -7,8 +7,8 @@
 #include "json.hpp"
 #
 extern "C" {
-void* make_mspull_streamer();
-void destroy_mspull_streamer(void* streamer);
+STREAMER_API void* make_mspull_streamer();
+STREAMER_API void destroy_mspull_streamer(void* streamer);
 }
 
 namespace cpp_streamer

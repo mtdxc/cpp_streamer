@@ -10,8 +10,8 @@
 #include <vector>
 
 extern "C" {
-void* make_mp4demux_streamer();
-void destroy_mp4demux_streamer(void* streamer);
+STREAMER_API void* make_mp4demux_streamer();
+STREAMER_API void destroy_mp4demux_streamer(void* streamer);
 }
 
 namespace cpp_streamer

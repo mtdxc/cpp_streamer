@@ -8,8 +8,8 @@
 #include <map>
 
 extern "C" {
-void* make_flvdemux_streamer();
-void destroy_flvdemux_streamer(void* streamer);
+STREAMER_API void* make_flvdemux_streamer();
+STREAMER_API void destroy_flvdemux_streamer(void* streamer);
 }
 
 namespace cpp_streamer

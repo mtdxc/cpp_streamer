@@ -9,8 +9,8 @@
 #include <mutex>
 
 extern "C" {
-void* make_mspush_streamer();
-void destroy_mspush_streamer(void* streamer);
+STREAMER_API void* make_mspush_streamer();
+STREAMER_API void destroy_mspush_streamer(void* streamer);
 }
 
 using json = nlohmann::json;

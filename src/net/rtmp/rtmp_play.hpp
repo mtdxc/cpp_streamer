@@ -12,8 +12,8 @@
 #include <memory>
 
 extern "C" {
-void* make_rtmpplay_streamer();
-void destroy_rtmpplay_streamer(void* streamer);
+STREAMER_API void* make_rtmpplay_streamer();
+STREAMER_API void destroy_rtmpplay_streamer(void* streamer);
 }
 
 namespace cpp_streamer

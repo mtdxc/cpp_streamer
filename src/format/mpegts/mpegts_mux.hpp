@@ -9,8 +9,8 @@
 
 extern "C"
 {
-void* make_mpegtsmux_streamer();
-void destroy_mpegtsmux_streamer(void* streamer);
+STREAMER_API void* make_mpegtsmux_streamer();
+STREAMER_API void destroy_mpegtsmux_streamer(void* streamer);
 }
 namespace cpp_streamer
 {
