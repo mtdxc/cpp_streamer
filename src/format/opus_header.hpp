@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <vector>
-
+#include <string>
 namespace cpp_streamer
 {
 

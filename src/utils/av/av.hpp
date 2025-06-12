@@ -2,6 +2,7 @@
 #define AV_DEF_HPP
 #include <stdint.h>
 #include <stddef.h>
+#include <string.h>
 #include <string>
 // #include <cstring>
 
