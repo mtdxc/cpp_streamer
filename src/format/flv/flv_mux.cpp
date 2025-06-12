@@ -38,8 +38,8 @@ FlvMuxer::~FlvMuxer()
 {
 }
 
-std::string FlvMuxer::StreamerName() {
-    return name_;
+const char* FlvMuxer::StreamerName() {
+    return name_.c_str();
 }
 
 int FlvMuxer::AddSinker(CppStreamerInterface* sinker) {
@@ -50,7 +50,7 @@ int FlvMuxer::AddSinker(CppStreamerInterface* sinker) {
     return sinkers_.size();
 }
 
-int FlvMuxer::RemoveSinker(const std::string& name) {
+int FlvMuxer::RemoveSinker(const char* name) {
     return sinkers_.erase(name);
 }
 
@@ -60,7 +60,7 @@ void FlvMuxer::SetReporter(StreamerReport* reporter) {
 
 void FlvMuxer::Report(const std::string& type, const std::string& value) {
     if (report_) {
-        report_->OnReport(name_, type, value);
+        report_->OnReport(name_.c_str(), type.c_str(), value.c_str());
     }
 }
 int FlvMuxer::SourceData(Media_Packet_Ptr pkt_ptr) {
@@ -115,7 +115,7 @@ int FlvMuxer::SourceData(Media_Packet_Ptr pkt_ptr) {
             seq_ptr->is_seq_hdr_ = true;
             seq_ptr->is_key_frame_ = false;
             seq_ptr->buffer_ptr_->Reset();
-            seq_ptr->buffer_ptr_->AppendData((char*)extra_data, extra_len);
+            seq_ptr->AppendData(extra_data, extra_len);
             InputPacket(seq_ptr);
         }
         int nalu_len = len - nalu_type_pos;
@@ -130,10 +130,10 @@ int FlvMuxer::SourceData(Media_Packet_Ptr pkt_ptr) {
     return InputPacket(pkt_ptr);
 }
 
-void FlvMuxer::StartNetwork(const std::string& url, void* loop_handle) {
+void FlvMuxer::StartNetwork(const char* url, void* loop_handle) {
 }
 
-void FlvMuxer::AddOption(const std::string& key, const std::string& value) {
+void FlvMuxer::AddOption(const char* key, const char* value) {
     auto iter = options_.find(key);
     if (iter == options_.end()) {
         std::stringstream ss;
@@ -141,7 +141,7 @@ void FlvMuxer::AddOption(const std::string& key, const std::string& value) {
         throw CppStreamException(ss.str().c_str());
     }
     options_[key] = value;
-    LogInfof(logger_, "set flvmuxer options key:%s, value:%s", key.c_str(), value.c_str());
+    LogInfof(logger_, "set flvmuxer options key:%s, value:%s", key, value);
 
     if (options_["onlyvideo"] == "true") {
         has_video_ = true;
@@ -274,15 +274,15 @@ int FlvMuxer::InputPacket(Media_Packet_Ptr pkt_ptr) {
         return -1;
     }
 
-    output_pkt_ptr->buffer_ptr_->AppendData((char*)header_data, header_size);
-    output_pkt_ptr->buffer_ptr_->AppendData(pkt_ptr->buffer_ptr_->Data(), pkt_ptr->buffer_ptr_->DataLen());
+    output_pkt_ptr->AppendData(header_data, header_size);
+    output_pkt_ptr->AppendData(pkt_ptr->buffer_ptr_->Data(), pkt_ptr->buffer_ptr_->DataLen());
 
     uint8_t pre_tag_size_p[4];
     pre_tag_size_p[0] = (pre_size >> 24) & 0xff;
     pre_tag_size_p[1] = (pre_size >> 16) & 0xff;
     pre_tag_size_p[2] = (pre_size >> 8) & 0xff;
     pre_tag_size_p[3] = pre_size & 0xff;
-    output_pkt_ptr->buffer_ptr_->AppendData((char*)pre_tag_size_p, sizeof(pre_tag_size_p));
+    output_pkt_ptr->AppendData(pre_tag_size_p, sizeof(pre_tag_size_p));
     output_pkt_ptr->av_type_    = pkt_ptr->av_type_;
     output_pkt_ptr->codec_type_ = pkt_ptr->codec_type_;
     output_pkt_ptr->fmt_type_   = MEDIA_FORMAT_FLV;
@@ -317,7 +317,7 @@ int FlvMuxer::MuxFlvHeader(Media_Packet_Ptr pkt_ptr) {
     uint8_t header_data[13] = {0x46, 0x4c, 0x56, 0x01, flag, 0x00, 0x00, 0x00, 0x09, 0, 0, 0, 0};
 
     pkt_ptr->fmt_type_ = MEDIA_FORMAT_FLV;
-    pkt_ptr->buffer_ptr_->AppendData((char*)header_data, sizeof(header_data));
+    pkt_ptr->AppendData(header_data, sizeof(header_data));
 
     return 0;
 }

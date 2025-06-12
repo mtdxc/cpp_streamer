@@ -46,8 +46,8 @@ void Whep::ReleaseHttpClient() {
     }
 }
 
-std::string Whep::StreamerName() {
-    return name_;
+const char* Whep::StreamerName() {
+    return name_.c_str();
 }
 
 void Whep::SetLogger(Logger* logger) {
@@ -62,7 +62,7 @@ int Whep::AddSinker(CppStreamerInterface* sinker) {
     return sinkers_.size();
 }
 
-int Whep::RemoveSinker(const std::string& name) {
+int Whep::RemoveSinker(const char* name) {
     return sinkers_.erase(name);
 }
 
@@ -70,7 +70,7 @@ int Whep::SourceData(Media_Packet_Ptr pkt_ptr) {
     return 0;
 }
 
-void Whep::StartNetwork(const std::string& url, void* loop_handle) {
+void Whep::StartNetwork(const char* url, void* loop_handle) {
     if (pc_) {
         delete pc_;
         pc_ = nullptr;
@@ -83,7 +83,7 @@ void Whep::StartNetwork(const std::string& url, void* loop_handle) {
 
     bool https_enable = false;
     if (!GetHostInfoByUrl(url, host_, port_, subpath_, https_enable)) {
-        CSM_THROW_ERROR("fail to get whep url by:%s", url.c_str());
+        CSM_THROW_ERROR("fail to get whep url by:%s", url);
     }
 
     Start(host_, port_, subpath_, https_enable);
@@ -91,7 +91,7 @@ void Whep::StartNetwork(const std::string& url, void* loop_handle) {
     return;
 }
 
-void Whep::AddOption(const std::string& key, const std::string& value) {
+void Whep::AddOption(const char* key, const char* value) {
     auto iter = options_.find(key);
     if (iter == options_.end()) {
         std::stringstream ss;
@@ -99,7 +99,7 @@ void Whep::AddOption(const std::string& key, const std::string& value) {
         throw CppStreamException(ss.str().c_str());
     }
     options_[key] = value;
-    LogInfof(logger_, "set whep options key:%s, value:%s", key.c_str(), value.c_str());
+    LogInfof(logger_, "set whep options key:%s, value:%s", key, value);
 }
 
 void Whep::SetReporter(StreamerReport* reporter) {
@@ -198,7 +198,7 @@ void Whep::OnState(const std::string& type, const std::string& value) {
     }
     //Report("dtls", "ready");
     if (report_) {
-        report_->OnReport(name_, type, value);
+        report_->OnReport(name_.c_str(), type.c_str(), value.c_str());
     }
 }
 

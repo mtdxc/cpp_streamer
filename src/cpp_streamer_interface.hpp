@@ -9,7 +9,7 @@
 #include <map>
 #undef STREAMER_API
 #if defined(_WIN32)
-#if defined(QKIDS_EXPORT)
+#if defined(STREAMER_EXPORT)
 #define STREAMER_API _declspec(dllexport)
 #else
 #define STREAMER_API _declspec(dllimport)
@@ -30,9 +30,7 @@ public:
     virtual ~StreamerReport() = default;
 
 public:
-    virtual void OnReport(const std::string& name,
-            const std::string& type,
-            const std::string& value) = 0;
+    virtual void OnReport(const char* name, const char* type, const char* value) = 0;
 };
 
 STREAMER_API class CppStreamerInterface
@@ -42,13 +40,13 @@ public:
     virtual ~CppStreamerInterface() = default;
 
 public:
-    virtual std::string StreamerName() = 0;
+    virtual const char* StreamerName() = 0;
     virtual void SetLogger(Logger* logger) = 0;
     virtual int AddSinker(CppStreamerInterface* sinker) = 0;
-    virtual int RemoveSinker(const std::string& name) = 0;
+    virtual int RemoveSinker(const char* name) = 0;
     virtual int SourceData(Media_Packet_Ptr pkt_ptr) = 0;
-    virtual void StartNetwork(const std::string& url, void* loop_handle) = 0;
-    virtual void AddOption(const std::string& key, const std::string& value) = 0;
+    virtual void StartNetwork(const char* url, void* loop_handle) = 0;
+    virtual void AddOption(const char* key, const char* value) = 0;
     virtual void SetReporter(StreamerReport* reporter) = 0;
 
 protected:

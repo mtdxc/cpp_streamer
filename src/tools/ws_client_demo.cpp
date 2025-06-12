@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
     }
     s_logger = new Logger();
     if (log_file_ready) {
-        s_logger->SetFilename(std::string(log_file));
+        s_logger->SetFilename(log_file);
     }
     uv_loop_t* loop = uv_default_loop();
     try {

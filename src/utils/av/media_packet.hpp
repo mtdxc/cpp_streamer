@@ -27,15 +27,13 @@ public:
     {
         copy_properties(input_packet);
         buffer_ptr_ = std::make_shared<DataBuffer>(input_packet.buffer_ptr_->DataLen() + 1024);
-        buffer_ptr_->AppendData(input_packet.buffer_ptr_->Data(),
-                input_packet.buffer_ptr_->DataLen());
+        buffer_ptr_->AppendData(input_packet.buffer_ptr_->Data(), input_packet.buffer_ptr_->DataLen());
     }
     Media_Packet& operator=(const Media_Packet& input_packet)
     {
         copy_properties(input_packet);
         buffer_ptr_ = std::make_shared<DataBuffer>(input_packet.buffer_ptr_->DataLen() + 1024);
-        buffer_ptr_->AppendData(input_packet.buffer_ptr_->Data(),
-                input_packet.buffer_ptr_->DataLen());
+        buffer_ptr_->AppendData(input_packet.buffer_ptr_->Data(), input_packet.buffer_ptr_->DataLen());
         return *this;
     }
     ~Media_Packet()
@@ -44,10 +42,20 @@ public:
 
     std::shared_ptr<Media_Packet> copy() {
         std::shared_ptr<Media_Packet> pkt_ptr = std::make_shared<Media_Packet>(this->buffer_ptr_->DataLen() + 1024);
-
         pkt_ptr->copy_properties(*this);
         pkt_ptr->buffer_ptr_->AppendData(this->buffer_ptr_->Data(), this->buffer_ptr_->DataLen());
         return pkt_ptr;
+    }
+    void AppendData(const void* data, size_t len) {
+        if (data && len > 0) {
+            buffer_ptr_->AppendData(data, len);
+        }
+    }
+    char* Data() {
+        return buffer_ptr_->Data();
+    }
+    size_t Size() {
+        return buffer_ptr_->DataLen();
     }
 
     void copy_properties(const Media_Packet& pkt) {
@@ -144,6 +152,16 @@ public:
     bool has_flv_audio_asc_ = false;
     std::shared_ptr<DataBuffer> buffer_ptr_;
     int metadata_type_;
+    void setMetaData(const char* key, const char* value) {
+        if (!key) return;
+        if (value && value[0]) {
+            metadata_[key] = value;
+        }
+        else {
+            metadata_.erase(key);
+        }
+    }
+private:
     std::map<std::string, std::string> metadata_;
 
 public:

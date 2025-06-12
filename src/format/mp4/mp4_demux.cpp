@@ -85,8 +85,8 @@ Mp4Demuxer::~Mp4Demuxer()
     unknown_boxes_.clear();
 }
 
-std::string Mp4Demuxer::StreamerName() {
-    return name_;
+const char* Mp4Demuxer::StreamerName() {
+    return name_.c_str();
 }
 
 int Mp4Demuxer::AddSinker(CppStreamerInterface* sinker) {
@@ -97,7 +97,7 @@ int Mp4Demuxer::AddSinker(CppStreamerInterface* sinker) {
     return sinkers_.size();
 }
 
-int Mp4Demuxer::RemoveSinker(const std::string& name) {
+int Mp4Demuxer::RemoveSinker(const char* name) {
     return 0;
 }
 
@@ -373,7 +373,7 @@ void Mp4Demuxer::sendMediaPacket(MEDIA_PKT_TYPE av_type, MEDIA_CODEC_TYPE codec_
     pkt_ptr->pts_ = pts;
     pkt_ptr->is_key_frame_ = is_keyframe;
     pkt_ptr->is_seq_hdr_ = is_seqhdr;
-    pkt_ptr->buffer_ptr_->AppendData((char*)data, len);
+    pkt_ptr->AppendData(data, len);
     Output(pkt_ptr);
 }
 
@@ -546,7 +546,7 @@ void Mp4Demuxer::handleH265VpsSpsPps(const TrakInfo& trakinfo) {
         CSM_THROW_ERROR("wrong media type(%s) exception", trakinfo.handler_type_.c_str());
     }
     if (trakinfo.codec_type_ != MEDIA_CODEC_H265) {
-        CSM_THROW_ERROR("wrong codec type(%s) exception", codectype_tostring(trakinfo.codec_type_).c_str());
+        CSM_THROW_ERROR("wrong codec type(%s) exception", codectype_tostring(trakinfo.codec_type_));
         return;
     }
     uint8_t* extra_data = (uint8_t*)(&trakinfo.sequence_data_[0]);
@@ -609,7 +609,7 @@ void Mp4Demuxer::handleH264SpsPps(const TrakInfo& trakinfo) {
         CSM_THROW_ERROR("wrong media type(%s) exception", trakinfo.handler_type_.c_str());
     }
     if (trakinfo.codec_type_ != MEDIA_CODEC_H264) {
-        CSM_THROW_ERROR("wrong codec type(%s) exception", codectype_tostring(trakinfo.codec_type_).c_str());
+        CSM_THROW_ERROR("wrong codec type(%s) exception", codectype_tostring(trakinfo.codec_type_));
         return;
     }
 
@@ -655,13 +655,13 @@ void Mp4Demuxer::makeMovItems() {
             } else if (trakinfo.codec_type_ == MEDIA_CODEC_H265) {
                 handleH265VpsSpsPps(trakinfo);
             } else {
-                CSM_THROW_ERROR("not support video codec:%s", codectype_tostring(trakinfo.codec_type_).c_str());
+                CSM_THROW_ERROR("not support video codec:%s", codectype_tostring(trakinfo.codec_type_));
             }
         } else if (trakinfo.handler_type_ == "soun") {
             if (trakinfo.codec_type_ == MEDIA_CODEC_AAC) {
                 handleAACExtraData(trakinfo);
             } else {
-                CSM_THROW_ERROR("not support audio codec:%s", codectype_tostring(trakinfo.codec_type_).c_str());
+                CSM_THROW_ERROR("not support audio codec:%s", codectype_tostring(trakinfo.codec_type_));
             }
         }
     }
@@ -704,7 +704,7 @@ void Mp4Demuxer::Output(Media_Packet_Ptr pkt_ptr) {
     }
 }
 
-void Mp4Demuxer::AddOption(const std::string& key, const std::string& value) {
+void Mp4Demuxer::AddOption(const char* key, const char* value) {
     auto iter = options_.find(key);
     if (iter == options_.end()) {
         std::stringstream ss;
@@ -712,7 +712,7 @@ void Mp4Demuxer::AddOption(const std::string& key, const std::string& value) {
         throw CppStreamException(ss.str().c_str());
     }
     options_[key] = value;
-    LogInfof(logger_, "set options key:%s, value:%s", key.c_str(), value.c_str());
+    LogInfof(logger_, "set options key:%s, value:%s", key, value);
 }
 
 void Mp4Demuxer::SetReporter(StreamerReport* reporter) {

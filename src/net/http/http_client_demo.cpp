@@ -101,7 +101,7 @@ int main(int argn, char** argv) {
     std::stringstream ss;
 
     s_logger = new Logger();
-    s_logger->SetFilename(std::string("http_client_demo.log"));
+    s_logger->SetFilename("http_client_demo.log");
 
     try {
         client c(loop, "https", hostip, port, s_logger);

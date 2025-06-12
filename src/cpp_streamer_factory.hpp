@@ -17,16 +17,16 @@ namespace cpp_streamer
 class CppStreamerFactory
 {
 public:
-    static void SetLibPath(const std::string& path);
+    static void SetLibPath(const char* path);
     static void SetLogger(Logger* logger) {
         s_logger_ = logger;
     }
-    static CppStreamerInterface* MakeStreamer(const std::string& streamer_name);
-    static void DestroyStreamer(const std::string& streamer_name, CppStreamerInterface* streamer);
+    static CppStreamerInterface* MakeStreamer(const char* streamer_name);
+    static void DestroyStreamer(const char* streamer_name, CppStreamerInterface* streamer);
     static void ReleaseAll();
 
 private:
-    static void* GetHandle(const std::string& streamer_name);
+    static void* GetHandle(const char* streamer_name);
 
 private:
     static std::string lib_path_;

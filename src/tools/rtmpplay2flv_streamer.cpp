@@ -32,7 +32,7 @@ public:
             LogErrorf(logger_, "make streamer flvmux error");
             return -1;
         }
-        LogInfof(logger_, "make flv mux streamer:%p, name:%s", flv_mux_streamer_, flv_mux_streamer_->StreamerName().c_str());
+        LogInfof(logger_, "make flv mux streamer:%p, name:%s", flv_mux_streamer_, flv_mux_streamer_->StreamerName());
         flv_mux_streamer_->SetLogger(logger_);
         flv_mux_streamer_->SetReporter(this);
         flv_mux_streamer_->AddSinker(this);
@@ -42,25 +42,22 @@ public:
             LogErrorf(logger_, "make streamer rtmpplay error");
             return -1;
         }
-        LogInfof(logger_, "make rtmpplay streamer:%p, name:%s", rtmpplay_streamer_, rtmpplay_streamer_->StreamerName().c_str());
+        LogInfof(logger_, "make rtmpplay streamer:%p, name:%s", rtmpplay_streamer_, rtmpplay_streamer_->StreamerName());
         rtmpplay_streamer_->SetLogger(logger_);
         rtmpplay_streamer_->SetReporter(this);
         rtmpplay_streamer_->AddSinker(flv_mux_streamer_);
         
-        rtmpplay_streamer_->StartNetwork(src_url_, loop_handle);
+        rtmpplay_streamer_->StartNetwork(src_url_.c_str(), loop_handle);
         return 0;
     }
 
 public:
-    virtual void OnReport(const std::string& name,
-            const std::string& type,
-            const std::string& value) override {
-        LogWarnf(logger_, "report name:%s, type:%s, value:%s",
-                name.c_str(), type.c_str(), value.c_str());
+    virtual void OnReport(const char* name, const char* type, const char* value) override {
+        LogWarnf(logger_, "report name:%s, type:%s, value:%s", name, type, value);
     }
 
 public:
-    virtual std::string StreamerName() override {
+    virtual const char* StreamerName() override {
         return "";
     }
 
@@ -70,7 +67,7 @@ public:
     virtual int AddSinker(CppStreamerInterface* sinker) override {
         return 0;
     }
-    virtual int RemoveSinker(const std::string& name) override {
+    virtual int RemoveSinker(const char* name) override {
         return 0; 
     }
     virtual int SourceData(Media_Packet_Ptr pkt_ptr) override {
@@ -83,10 +80,10 @@ public:
         return 0;
     }
 
-    virtual void StartNetwork(const std::string& url, void* loop_handle) override {
+    virtual void StartNetwork(const char* url, void* loop_handle) override {
     }
 
-    virtual void AddOption(const std::string& key, const std::string& value) override{
+    virtual void AddOption(const char* key, const char* value) override{
         return;
     }
 
@@ -139,7 +136,7 @@ int main(int argc, char** argv) {
 
     s_logger = new Logger();
     if (log_file_ready) {
-        s_logger->SetFilename(std::string(log_file));
+        s_logger->SetFilename(log_file);
     }
 
     CppStreamerFactory::SetLogger(s_logger);

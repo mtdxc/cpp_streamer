@@ -121,7 +121,7 @@ void RtmpPublish::HandleVideoData(Media_Packet_Ptr pkt_ptr) {
             seq_ptr->is_seq_hdr_ = true;
             seq_ptr->is_key_frame_ = false;
             seq_ptr->buffer_ptr_->Reset();
-            seq_ptr->buffer_ptr_->AppendData((char*)extra_data, extra_len);
+            seq_ptr->AppendData(extra_data, extra_len);
             SendVideo(seq_ptr);
         }
 
@@ -137,8 +137,8 @@ void RtmpPublish::HandleVideoData(Media_Packet_Ptr pkt_ptr) {
         video_ptr->is_seq_hdr_   = false;
         video_ptr->is_key_frame_ = H264_IS_KEYFRAME(p[nalu_type_pos]);
         video_ptr->buffer_ptr_->Reset();
-        video_ptr->buffer_ptr_->AppendData((char*)nalu_len_data, sizeof(nalu_len_data));
-        video_ptr->buffer_ptr_->AppendData((char*)p, nalu_len);
+        video_ptr->AppendData(nalu_len_data, sizeof(nalu_len_data));
+        video_ptr->AppendData(p, nalu_len);
 
         SendVideo(video_ptr);
     }
@@ -228,8 +228,7 @@ void RtmpPublish::HandleMediaData() {
             } else if (pkt_ptr->av_type_ == MEDIA_AUDIO_TYPE) {
                 HandleAudioData(pkt_ptr);
             } else {
-                LogErrorf(logger_, "not suport av type:%s",
-                        avtype_tostring(pkt_ptr->av_type_).c_str());
+                LogErrorf(logger_, "not suport av type:%s", avtype_tostring(pkt_ptr->av_type_));
             }
         } else {
             LogErrorf(logger_, "not suport format:%d", pkt_ptr->fmt_type_);
@@ -263,8 +262,8 @@ void RtmpPublish::SendRtmp(Media_Packet_Ptr pkt_ptr) {
     client_session_->RtmpWrite(pkt_ptr);
 }
 
-std::string RtmpPublish::StreamerName() {
-    return name_;
+const char* RtmpPublish::StreamerName() {
+    return name_.c_str();
 }
 
 void RtmpPublish::SetLogger(Logger* logger) {
@@ -279,7 +278,7 @@ int RtmpPublish::AddSinker(CppStreamerInterface* sinker) {
     return sinkers_.size();
 }
 
-int RtmpPublish::RemoveSinker(const std::string& name) {
+int RtmpPublish::RemoveSinker(const char* name) {
     return sinkers_.erase(name);
 }
 
@@ -294,7 +293,7 @@ int RtmpPublish::SourceData(Media_Packet_Ptr pkt_ptr) {
     return (int)packet_queue_.size();
 }
 
-void RtmpPublish::StartNetwork(const std::string& url, void* loop_handle) {
+void RtmpPublish::StartNetwork(const char* url, void* loop_handle) {
     src_url_ = url;
     if (!loop_handle) {
         running_ = true;
@@ -306,7 +305,7 @@ void RtmpPublish::StartNetwork(const std::string& url, void* loop_handle) {
     }
 }
 
-void RtmpPublish::AddOption(const std::string& key, const std::string& value) {
+void RtmpPublish::AddOption(const char* key, const char* value) {
 
 }
 
@@ -316,7 +315,7 @@ void RtmpPublish::SetReporter(StreamerReport* reporter) {
 
 void RtmpPublish::ReportEvent(const std::string& type, const std::string& value) {
     if (report_) {
-        report_->OnReport(name_, type, value);
+        report_->OnReport(name_.c_str(), type.c_str(), value.c_str());
     }
 }
 

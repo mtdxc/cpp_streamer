@@ -12,7 +12,7 @@ class FileRead : public IoReaderI
 public:
     FileRead(const std::string& filename):filename_(filename)
     {
-        file_ = fopen(filename.c_str(), "r");
+        file_ = fopen(filename.c_str(), "rb");
         if (!file_) {
             CSM_THROW_ERROR("read file exception");
         }
@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
     std::cout << "input ogg file:" << input_ogg_name << ", log file:" << log_file << "\r\n";
     s_logger = new Logger();
     if (log_file_ready) {
-        s_logger->SetFilename(std::string(log_file));
+        s_logger->SetFilename(log_file);
     }
     FileRead freader(input_ogg_name);
     OpusDataCallbackImpl cb(s_logger);

@@ -42,7 +42,7 @@ public:
             return -1;
         }
         LogInfof(logger_, "make flv demux streamer:%p, name:%s",
-                flv_demux_streamer_, flv_demux_streamer_->StreamerName().c_str());
+                flv_demux_streamer_, flv_demux_streamer_->StreamerName());
         flv_demux_streamer_->SetLogger(logger_);
         flv_demux_streamer_->SetReporter(this);
  
@@ -52,7 +52,7 @@ public:
             return -1;
         }
         LogInfof(logger_, "make mpegts mux streamer:%p, name:%s",
-                ts_mux_streamer_, ts_mux_streamer_->StreamerName().c_str());
+                ts_mux_streamer_, ts_mux_streamer_->StreamerName());
         ts_mux_streamer_->SetLogger(logger_);
         ts_mux_streamer_->SetReporter(this);
         ts_mux_streamer_->AddSinker(this);
@@ -67,21 +67,18 @@ public:
         }
         //LogInfof(logger_, "input data len:%u", data_len);
         Media_Packet_Ptr pkt_ptr = std::make_shared<Media_Packet>();
-        pkt_ptr->buffer_ptr_->AppendData((char*)data, data_len);
+        pkt_ptr->AppendData(data, data_len);
         flv_demux_streamer_->SourceData(pkt_ptr);
         return 0;
     }
 
 public:
-    virtual void OnReport(const std::string& name,
-            const std::string& type,
-            const std::string& value) override {
-        LogWarnf(logger_, "report name:%s, type:%s, value:%s",
-                name.c_str(), type.c_str(), value.c_str());
+    virtual void OnReport(const char* name, const char* type, const char* value) override {
+        LogWarnf(logger_, "report name:%s, type:%s, value:%s", name, type, value);
     }
 
 public:
-    virtual std::string StreamerName() override {
+    virtual const char* StreamerName() override {
         return "flv2ts_manager";
     }
     virtual void SetLogger(Logger* logger) override {
@@ -91,7 +88,7 @@ public:
         return 0;
     }
 
-    virtual int RemoveSinker(const std::string& name) override {
+    virtual int RemoveSinker(const char* name) override {
         return 0;
     }
 
@@ -103,10 +100,10 @@ public:
         }
         return 0;
     }
-    virtual void StartNetwork(const std::string& url, void* loop_handle) override {
+    virtual void StartNetwork(const char* url, void* loop_handle) override {
         return;
     }
-    virtual void AddOption(const std::string& key, const std::string& value) override {
+    virtual void AddOption(const char* key, const char* value) override {
         return;
     }
     virtual void SetReporter(StreamerReport* reporter) override {
@@ -159,7 +156,7 @@ int main(int argc, char** argv) {
 
     s_logger = new Logger();
     if (log_file_ready) {
-        s_logger->SetFilename(std::string(log_file));
+        s_logger->SetFilename(log_file);
     }
 
     CppStreamerFactory::SetLogger(s_logger);
@@ -175,7 +172,7 @@ int main(int argc, char** argv) {
         LogErrorf(s_logger, "call GenFlvDemuxStreamer error");
         return -1;
     }
-    FILE* file_p = fopen(input_flv_name, "r");
+    FILE* file_p = fopen(input_flv_name, "rb");
     if (!file_p) {
         LogErrorf(s_logger, "open flv file error:%s", input_flv_name);
         return -1;

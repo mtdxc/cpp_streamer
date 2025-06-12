@@ -75,8 +75,7 @@ void MsPush::HandleMediaData() {
         } else if (pkt_ptr->av_type_ == MEDIA_AUDIO_TYPE) {
             pc_->SendAudioPacket(pkt_ptr);
         } else {
-            LogErrorf(logger_, "input media type error:%s",
-                    avtype_tostring(pkt_ptr->av_type_).c_str());
+            LogErrorf(logger_, "input media type error:%s", avtype_tostring(pkt_ptr->av_type_));
         }
     }
     return;
@@ -89,8 +88,8 @@ void MsPush::ReleaseHttpClient(HttpClient*& hc) {
     }
 }
 
-std::string MsPush::StreamerName() {
-    return name_;
+const char* MsPush::StreamerName() {
+    return name_.c_str();
 }
 
 void MsPush::SetLogger(Logger* logger) {
@@ -105,7 +104,7 @@ int MsPush::AddSinker(CppStreamerInterface* sinker) {
     return sinkers_.size();
 }
 
-int MsPush::RemoveSinker(const std::string& name) {
+int MsPush::RemoveSinker(const char* name) {
     return sinkers_.erase(name);
 }
 
@@ -120,7 +119,7 @@ int MsPush::SourceData(Media_Packet_Ptr pkt_ptr) {
     return (int)packet_queue_.size();
 }
 
-void MsPush::StartNetwork(const std::string& url, void* loop_handle) {
+void MsPush::StartNetwork(const char* url, void* loop_handle) {
     if (pc_) {
         delete pc_;
         pc_ = nullptr;
@@ -265,7 +264,7 @@ void MsPush::AudioProduceRequest() {
     hc_audio_prd_->Post(subpath.str(), headers, req_json.dump().c_str());
 }
 
-void MsPush::AddOption(const std::string& key, const std::string& value) {
+void MsPush::AddOption(const char* key, const char* value) {
     auto iter = options_.find(key);
     if (iter == options_.end()) {
         std::stringstream ss;
@@ -273,7 +272,7 @@ void MsPush::AddOption(const std::string& key, const std::string& value) {
         throw CppStreamException(ss.str().c_str());
     }
     options_[key] = value;
-    LogInfof(logger_, "set mediaspu broadcaster options key:%s, value:%s", key.c_str(), value.c_str());
+    LogInfof(logger_, "set mediaspu broadcaster options key:%s, value:%s", key, value);
 }
 
 void MsPush::SetReporter(StreamerReport* reporter) {
@@ -486,7 +485,7 @@ void MsPush::OnState(const std::string& type, const std::string& value) {
 
 void MsPush::Report(const std::string& type, const std::string& value) {
     if (report_) {
-        report_->OnReport(name_, type, value);
+        report_->OnReport(name_.c_str(), type.c_str(), value.c_str());
     }
 }
 

@@ -56,30 +56,27 @@ public:
     void Start() {
         LogInfof(logger_, "start network url:%s", src_url_.c_str());
         try {
-            mspull_streamer_->StartNetwork(src_url_, loop_);
+            mspull_streamer_->StartNetwork(src_url_.c_str(), loop_);
         } catch(CppStreamException& e) {
             LogErrorf(logger_, "mspull start network exception:%s", e.what());
         }
     }
 
 public:
-    virtual void OnReport(const std::string& name,
-            const std::string& type,
-            const std::string& value) override {
-        LogWarnf(logger_, "report name:%s, type:%s, value:%s",
-                name.c_str(), type.c_str(), value.c_str());
-        if (type == "dtls") {
-            if (value == "ready") {
+    virtual void OnReport(const char* name, const char* type, const char* value) override {
+        LogWarnf(logger_, "report name:%s, type:%s, value:%s", name, type, value);
+        if (!strcmp(type, "dtls")) {
+            if (!strcmp(value, "ready")) {
                 mspull_ready_ = true;
             }
         }
-        if (type == "error") {
+        if (!strcmp(type, "error")) {
             mspull_ready_ = false;
         }
     }
 
 public:
-    virtual std::string StreamerName() override {
+    virtual const char* StreamerName() override {
         return "mspull2mpegts";
     }
     virtual void SetLogger(Logger* logger) override {
@@ -89,7 +86,7 @@ public:
         return 0;
     }
 
-    virtual int RemoveSinker(const std::string& name) override {
+    virtual int RemoveSinker(const char* name) override {
         return 0;
     }
     virtual int SourceData(Media_Packet_Ptr pkt_ptr) override {
@@ -101,10 +98,10 @@ public:
 
         return 0;
     }
-    virtual void StartNetwork(const std::string& url, void* loop_handle) override {
+    virtual void StartNetwork(const char* url, void* loop_handle) override {
 
     }
-    virtual void AddOption(const std::string& key, const std::string& value) override {
+    virtual void AddOption(const char* key, const char* value) override {
 
     }
     virtual void SetReporter(StreamerReport* reporter) override {
@@ -163,7 +160,7 @@ int main(int argc, char** argv) {
 
     s_logger = new Logger();
     if (log_file_ready) {
-        s_logger->SetFilename(std::string(log_file));
+        s_logger->SetFilename(log_file);
     }
 
     CppStreamerFactory::SetLogger(s_logger);

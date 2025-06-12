@@ -50,7 +50,7 @@ int WebSocketSessionBase::HandleFrame(DataBuffer& data) {
             return 1;
         }
         std::shared_ptr<DataBuffer> buffer_ptr = std::make_shared<DataBuffer>(frame_->GetPayloadLen() + 1024);
-        buffer_ptr->AppendData((char*)frame_->GetPayloadData(), frame_->GetPayloadLen());
+        buffer_ptr->AppendData(frame_->GetPayloadData(), frame_->GetPayloadLen());
         recv_buffer_vec_.emplace_back(std::move(buffer_ptr));
 
         frame_->Consume(frame_->GetPayloadStart() + frame_->GetPayloadLen());

@@ -93,7 +93,7 @@ enum H264AvcNaluType
     kAvcNaluTypeCodedSliceExt = 20,
 };
 
-inline std::string avc_nalu2str(H264AvcNaluType nalu_type) {
+inline const char* avc_nalu2str(H264AvcNaluType nalu_type) {
     switch (nalu_type) {
         case kAvcNaluTypeNonIDR: return "NonIDR";
         case kAvcNaluTypeDataPartitionA: return "DataPartitionA";
@@ -149,7 +149,7 @@ inline void get_video_extradata(unsigned char *pps, int pps_len,
     return;
 }
 
-inline std::string avtype_tostring(MEDIA_PKT_TYPE type) {
+inline const char* avtype_tostring(MEDIA_PKT_TYPE type) {
     switch(type)
     {
         case MEDIA_VIDEO_TYPE:
@@ -163,7 +163,7 @@ inline std::string avtype_tostring(MEDIA_PKT_TYPE type) {
     }
 }
 
-inline std::string codectype_tostring(MEDIA_CODEC_TYPE type) {
+inline const char* codectype_tostring(MEDIA_CODEC_TYPE type) {
     switch(type)
     {
         case MEDIA_CODEC_H264:
@@ -185,7 +185,7 @@ inline std::string codectype_tostring(MEDIA_CODEC_TYPE type) {
     }
 }
 
-inline std::string formattype_tostring(MEDIA_FORMAT_TYPE type) {
+inline const char* formattype_tostring(MEDIA_FORMAT_TYPE type) {
     switch (type)
     {
         case MEDIA_FORMAT_RAW:

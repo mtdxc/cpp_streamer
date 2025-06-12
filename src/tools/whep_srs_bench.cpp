@@ -66,23 +66,20 @@ public:
         exit(0);
     }
 public:
-    virtual void OnReport(const std::string& name,
-            const std::string& type,
-            const std::string& value) override {
-        LogWarnf(logger_, "report name:%s, type:%s, value:%s",
-                name.c_str(), type.c_str(), value.c_str());
-        if (value == "ready") {
+    virtual void OnReport(const char* name, const char* type, const char* value) override {
+        LogWarnf(logger_, "report name:%s, type:%s, value:%s", name, type, value);
+        if (!strcmp(value, "ready")) {
             int index = GetWhepIndex(name);
             if (index < 0) {
-                LogErrorf(logger_, "fail to get whep streamer by name:%s", name.c_str());
+                LogErrorf(logger_, "fail to get whep streamer by name:%s", name);
             } else {
-                LogWarnf(logger_, "whep streamer %d is ready, name:%s", index, name.c_str());
+                LogWarnf(logger_, "whep streamer %d is ready, name:%s", index, name);
             }
         }
     }
 
 public:
-    virtual std::string StreamerName() override {
+    virtual const char* StreamerName() override {
         return "whepbench";
     }
     virtual void SetLogger(Logger* logger) override {
@@ -92,16 +89,16 @@ public:
         return 0;
     }
 
-    virtual int RemoveSinker(const std::string& name) override {
+    virtual int RemoveSinker(const char* name) override {
         return 0;
     }
     virtual int SourceData(Media_Packet_Ptr pkt_ptr) override {
         return 0;
     }
-    virtual void StartNetwork(const std::string& url, void* loop_handle) override {
+    virtual void StartNetwork(const char* url, void* loop_handle) override {
 
     }
-    virtual void AddOption(const std::string& key, const std::string& value) override {
+    virtual void AddOption(const char* key, const char* value) override {
 
     }
     virtual void SetReporter(StreamerReport* reporter) override {
@@ -128,7 +125,7 @@ private:
             std::string url = GetUrl(i);
             LogWarnf(logger_, "start network url:%s", url.c_str());
             try {
-                srs_whep_vec[i]->StartNetwork(url, loop_);
+                srs_whep_vec[i]->StartNetwork(url.c_str(), loop_);
             } catch(CppStreamException& e) {
                 LogErrorf(logger_, "mediasoup pull start network exception:%s", e.what());
             }
@@ -231,7 +228,7 @@ int main(int argc, char** argv) {
 
     s_logger = new Logger();
     if (log_file_ready) {
-        s_logger->SetFilename(std::string(log_file));
+        s_logger->SetFilename(log_file);
     }
 
     CppStreamerFactory::SetLogger(s_logger);

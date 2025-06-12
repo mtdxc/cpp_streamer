@@ -28,8 +28,8 @@ TimeSync::~TimeSync()
 {
 }
 
-std::string TimeSync::StreamerName() {
-    return name_;
+const char* TimeSync::StreamerName() {
+    return name_.c_str();
 }
 
 void TimeSync::SetLogger(Logger* logger) {
@@ -44,7 +44,7 @@ int TimeSync::AddSinker(CppStreamerInterface* sinker) {
     return sinkers_.size();
 }
 
-int TimeSync::RemoveSinker(const std::string& name) {
+int TimeSync::RemoveSinker(const char* name) {
     return sinkers_.erase(name);
 }
 
@@ -167,11 +167,11 @@ void TimeSync::HandleAudioPacket(Media_Packet_Ptr pkt_ptr) {
     return;
 }
 
-void TimeSync::StartNetwork(const std::string& url, void* loop_handle) {
+void TimeSync::StartNetwork(const char* url, void* loop_handle) {
 
 }
 
-void TimeSync::AddOption(const std::string& key, const std::string& value) {
+void TimeSync::AddOption(const char* key, const char* value) {
 
 }
 

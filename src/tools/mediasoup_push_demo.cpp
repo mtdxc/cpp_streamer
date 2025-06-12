@@ -41,7 +41,7 @@ public:
             return -1;
         }
         LogInfof(logger_, "make mpegts demux streamer:%p, name:%s", 
-                tsdemux_streamer_, tsdemux_streamer_->StreamerName().c_str());
+                tsdemux_streamer_, tsdemux_streamer_->StreamerName());
         tsdemux_streamer_->SetLogger(logger_);
         tsdemux_streamer_->AddOption("re", "true");
         tsdemux_streamer_->SetReporter(this);
@@ -51,12 +51,12 @@ public:
             LogErrorf(logger_, "make streamer mspush error");
             return -1;
         }
-        LogInfof(logger_, "make mspush streamer:%p, name:%s", mspush_streamer_, mspush_streamer_->StreamerName().c_str());
+        LogInfof(logger_, "make mspush streamer:%p, name:%s", mspush_streamer_, mspush_streamer_->StreamerName());
         mspush_streamer_->SetLogger(logger_);
         mspush_streamer_->SetReporter(this);
         LogInfof(logger_, "start network url:%s", dst_url_.c_str());
         try {
-            mspush_streamer_->StartNetwork(dst_url_, loop_handle);
+            mspush_streamer_->StartNetwork(dst_url_.c_str(), loop_handle);
         } catch(CppStreamException& e) {
             LogErrorf(logger_, "mediasoup push start network exception:%s", e.what());
         }
@@ -76,17 +76,14 @@ public:
     }
 
 public:
-    virtual void OnReport(const std::string& name,
-            const std::string& type,
-            const std::string& value) override {
-        LogWarnf(logger_, "report name:%s, type:%s, value:%s",
-                name.c_str(), type.c_str(), value.c_str());
-        if (type == "audio_produce") {
-            if (value == "ready") {
+    virtual void OnReport(const char* name, const char* type, const char* value) override {
+        LogWarnf(logger_, "report name:%s, type:%s, value:%s", name, type, value);
+        if (!strcmp(type, "audio_produce")) {
+            if (!strcmp(value, "ready")) {
                 mspush_ready_ = true;
             }
         }
-        if (type == "error") {
+        if (!strcmp(type, "error")) {
             mspush_ready_ = false;
         }
     }
@@ -99,7 +96,7 @@ protected:
         }
         //LogInfof(logger_, "input data len:%u", data_len);
         Media_Packet_Ptr pkt_ptr = std::make_shared<Media_Packet>();
-        pkt_ptr->buffer_ptr_->AppendData((char*)data, data_len);
+        pkt_ptr->AppendData(data, data_len);
         tsdemux_streamer_->SourceData(pkt_ptr);
         return 0;
     }
@@ -118,7 +115,7 @@ protected:
         }
         LogInfof(logger_, "mspush session is ready");
 
-        FILE* file_p = fopen(ts_file_.c_str(), "r");
+        FILE* file_p = fopen(ts_file_.c_str(), "rb");
         if (!file_p) {
             LogErrorf(s_logger, "open mpegts file error:%s", ts_file_.c_str());
             return;
@@ -195,7 +192,7 @@ int main(int argc, char** argv) {
 
     s_logger = new Logger();
     if (log_file_ready) {
-        s_logger->SetFilename(std::string(log_file));
+        s_logger->SetFilename(log_file);
     }
 
     CppStreamerFactory::SetLogger(s_logger);

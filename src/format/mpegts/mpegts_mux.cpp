@@ -137,8 +137,8 @@ MpegtsMux::~MpegtsMux() {
 
 }
 
-std::string MpegtsMux::StreamerName() {
-    return name_;
+const char* MpegtsMux::StreamerName() {
+    return name_.c_str();
 }
 
 void MpegtsMux::SetLogger(Logger* logger) {
@@ -153,7 +153,7 @@ int MpegtsMux::AddSinker(CppStreamerInterface* sinker) {
     return sinkers_.size();
 }
 
-int MpegtsMux::RemoveSinker(const std::string& name) {
+int MpegtsMux::RemoveSinker(const char* name) {
     return sinkers_.erase(name);
 }
 
@@ -170,15 +170,15 @@ int MpegtsMux::SourceData(Media_Packet_Ptr pkt_ptr) {
 
 void MpegtsMux::ReportEvent(const std::string& type, const std::string& value) {
     if (report_) {
-        report_->OnReport(name_, type, value);
+        report_->OnReport(name_.c_str(), type.c_str(), value.c_str());
     }
 }
 
-void MpegtsMux::StartNetwork(const std::string& url, void* loop_handle) {
+void MpegtsMux::StartNetwork(const char* url, void* loop_handle) {
     return;
 }
 
-void MpegtsMux::AddOption(const std::string& key, const std::string& value) {
+void MpegtsMux::AddOption(const char* key, const char* value) {
     return;
 }
 
@@ -213,10 +213,10 @@ int MpegtsMux::InputPacket(Media_Packet_Ptr pkt_ptr) {
         if (pkt_ptr->av_type_ == MEDIA_VIDEO_TYPE) {
             video_ready_ = true;
             SetVideoCodec(pkt_ptr->codec_type_);
-            LogInfof(logger_, "set video codec type:%s", codectype_tostring(pkt_ptr->codec_type_).c_str());
+            LogInfof(logger_, "set video codec type:%s", codectype_tostring(pkt_ptr->codec_type_));
         } else if (pkt_ptr->av_type_ == MEDIA_AUDIO_TYPE) {
             audio_ready_ = true;
-            LogInfof(logger_, "set opus codec type:%s", codectype_tostring(pkt_ptr->codec_type_).c_str());
+            LogInfof(logger_, "set opus codec type:%s", codectype_tostring(pkt_ptr->codec_type_));
             SetAudioCodec(pkt_ptr->codec_type_);
         }
         wait_queue_.push(pkt_ptr);
@@ -361,16 +361,16 @@ int MpegtsMux::HandleH264(Media_Packet_Ptr pkt_ptr) {
 
         size_t aud_data_len = 0;
         uint8_t* aud_data = GetH264AudData(aud_data_len);
-        nalu_pkt_ptr->buffer_ptr_->AppendData((char*)aud_data, aud_data_len);
+        nalu_pkt_ptr->AppendData(aud_data, aud_data_len);
         if (H264_IS_KEYFRAME(nalu_type)) {
             //LogInfoData(logger_, data, data_len, "key frame");
             //LogInfoData(logger_, sps_, sps_len_, "sps");
             //LogInfoData(logger_, pps_, pps_len_, "pps");
             keyframe_ready_ = true;
-            nalu_pkt_ptr->buffer_ptr_->AppendData((char*)sps_, sps_len_);
-            nalu_pkt_ptr->buffer_ptr_->AppendData((char*)pps_, pps_len_);
+            nalu_pkt_ptr->AppendData(sps_, sps_len_);
+            nalu_pkt_ptr->AppendData(pps_, pps_len_);
         }
-        nalu_pkt_ptr->buffer_ptr_->AppendData((char*)data, data_len);
+        nalu_pkt_ptr->AppendData(data, data_len);
 
         if (keyframe_ready_) {
             WritePes(nalu_pkt_ptr);
@@ -421,18 +421,18 @@ int MpegtsMux::HandleH265(Media_Packet_Ptr pkt_ptr) {
 
         size_t aud_data_len = 0;
         uint8_t* aud_data = GetH265AudData(aud_data_len);
-        nalu_pkt_ptr->buffer_ptr_->AppendData((char*)aud_data, aud_data_len);
+        nalu_pkt_ptr->AppendData(aud_data, aud_data_len);
         if ((nalu_type >= NAL_UNIT_CODED_SLICE_BLA) && (nalu_type <= NAL_UNIT_RESERVED_23) && !append_vps_pps_sps) {
-            nalu_pkt_ptr->buffer_ptr_->AppendData((char*)H265_START_CODE, sizeof(H265_START_CODE));
-            nalu_pkt_ptr->buffer_ptr_->AppendData((char*)vps_, vps_len_);
-            nalu_pkt_ptr->buffer_ptr_->AppendData((char*)H265_START_CODE, sizeof(H265_START_CODE));
-            nalu_pkt_ptr->buffer_ptr_->AppendData((char*)sps_, sps_len_);
-            nalu_pkt_ptr->buffer_ptr_->AppendData((char*)H265_START_CODE, sizeof(H265_START_CODE));
-            nalu_pkt_ptr->buffer_ptr_->AppendData((char*)pps_, pps_len_);
+            nalu_pkt_ptr->AppendData(H265_START_CODE, sizeof(H265_START_CODE));
+            nalu_pkt_ptr->AppendData(vps_, vps_len_);
+            nalu_pkt_ptr->AppendData(H265_START_CODE, sizeof(H265_START_CODE));
+            nalu_pkt_ptr->AppendData(sps_, sps_len_);
+            nalu_pkt_ptr->AppendData(H265_START_CODE, sizeof(H265_START_CODE));
+            nalu_pkt_ptr->AppendData(pps_, pps_len_);
             append_vps_pps_sps = true;
         }
-        nalu_pkt_ptr->buffer_ptr_->AppendData((char*)H265_START_CODE, sizeof(H265_START_CODE));
-        nalu_pkt_ptr->buffer_ptr_->AppendData((char*)data + 4, data_len - 4);
+        nalu_pkt_ptr->AppendData(H265_START_CODE, sizeof(H265_START_CODE));
+        nalu_pkt_ptr->AppendData(data + 4, data_len - 4);
 
         WritePes(nalu_pkt_ptr);
     }
@@ -451,7 +451,7 @@ int MpegtsMux::HandleAudio(Media_Packet_Ptr pkt_ptr) {
         return HandleAudioOpus(pkt_ptr);
     }
     char error_sz[128];
-    snprintf(error_sz, sizeof(error_sz), "not support audio codec type:%s", codectype_tostring(pkt_ptr->codec_type_).c_str());
+    snprintf(error_sz, sizeof(error_sz), "not support audio codec type:%s", codectype_tostring(pkt_ptr->codec_type_));
     ReportEvent("error", error_sz);
     return -1;
 }
@@ -465,7 +465,7 @@ int MpegtsMux::HandleAudioAac(Media_Packet_Ptr pkt_ptr) {
 
         aac_type_ = pkt_ptr->aac_asc_type_;
         LogInfof(logger_, "audio codec type:%s, aac type:%d, sample rate:%d, sample size:%d, channel:%d",
-            codectype_tostring(audio_codec_type_).c_str(), aac_type_, sample_rate_, sample_size, channel_);
+            codectype_tostring(audio_codec_type_), aac_type_, sample_rate_, sample_size, channel_);
         return 0;
     }
 
@@ -1012,7 +1012,7 @@ void MpegtsMux::TsOutput(Media_Packet_Ptr pkt_ptr, uint8_t* data) {
             }
             
             ts_pkt_ptr->fmt_type_ = MEDIA_FORMAT_MPEGTS;
-            ts_pkt_ptr->buffer_ptr_->AppendData((char*)data, (size_t)TS_PACKET_SIZE);
+            ts_pkt_ptr->AppendData(data, (size_t)TS_PACKET_SIZE);
             sinker.second->SourceData(ts_pkt_ptr);
         }
     }

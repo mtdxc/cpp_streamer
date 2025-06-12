@@ -66,8 +66,8 @@ MpegtsDemux::~MpegtsDemux() {
 
 }
 
-std::string MpegtsDemux::StreamerName() {
-    return name_;
+const char* MpegtsDemux::StreamerName() {
+    return name_.c_str();
 }
 
 void MpegtsDemux::SetLogger(Logger* logger) {
@@ -82,7 +82,7 @@ int MpegtsDemux::AddSinker(CppStreamerInterface* sinker) {
     return sinkers_.size();
 }
 
-int MpegtsDemux::RemoveSinker(const std::string& name) {
+int MpegtsDemux::RemoveSinker(const char* name) {
     return sinkers_.erase(name);
 }
 
@@ -92,7 +92,7 @@ void MpegtsDemux::SetReporter(StreamerReport* reporter) {
 
 void MpegtsDemux::ReportEvent(const std::string& type, const std::string& value) {
     if (report_) {
-        report_->OnReport(name_, type, value);
+        report_->OnReport(name_.c_str(), type.c_str(), value.c_str());
     }
 }
 
@@ -100,11 +100,11 @@ int MpegtsDemux::SourceData(Media_Packet_Ptr pkt_ptr) {
     return Decode(pkt_ptr->buffer_ptr_);
 }
 
-void MpegtsDemux::StartNetwork(const std::string& url, void* loop_handle) {
+void MpegtsDemux::StartNetwork(const char* url, void* loop_handle) {
 
 }
 
-void MpegtsDemux::AddOption(const std::string& key, const std::string& value) {
+void MpegtsDemux::AddOption(const char* key, const char* value) {
     auto iter = options_.find(key);
     if (iter == options_.end()) {
         std::stringstream ss;
@@ -112,7 +112,7 @@ void MpegtsDemux::AddOption(const std::string& key, const std::string& value) {
         throw CppStreamException(ss.str().c_str());
     }
     options_[key] = value;
-    LogInfof(logger_, "set options key:%s, value:%s", key.c_str(), value.c_str());
+    LogInfof(logger_, "set options key:%s, value:%s", key, value);
 }
 
 int MpegtsDemux::DecodeUnit(unsigned char* data_p)
@@ -465,7 +465,7 @@ void MpegtsDemux::InsertIntoDatabuf(unsigned char* data_p, size_t data_size, uns
     _data_total += data_size;
 
     DATA_BUFFER_PTR data_ptr = std::make_shared<DataBuffer>();
-    data_ptr->AppendData((char*)data_p, data_size);
+    data_ptr->AppendData(data_p, data_size);
     _data_buffer_vec.push_back(data_ptr);
     return;
 }
@@ -522,7 +522,7 @@ void MpegtsDemux::OnCallback(unsigned short pid, uint64_t dts, uint64_t pts) {
        int len = _data_buffer_vec[index]->DataLen();
 
        if (len > 0) {
-           pkt_ptr->buffer_ptr_->AppendData((char*)p, len);
+           pkt_ptr->AppendData(p, len);
        }
     }
     _data_buffer_vec.clear();
@@ -558,7 +558,7 @@ void MpegtsDemux::OnCallback(unsigned short pid, uint64_t dts, uint64_t pts) {
                 output_ptr->is_seq_hdr_   = H264_IS_SPS(p[nalu_type_pos]) || H264_IS_PPS(p[nalu_type_pos]);
                 output_ptr->is_key_frame_ = H264_IS_KEYFRAME(p[nalu_type_pos]);
 
-                output_ptr->buffer_ptr_->AppendData((char*)p, nalu_len);
+                output_ptr->AppendData(p, nalu_len);
                 Output(output_ptr);
             }
         }
@@ -594,7 +594,7 @@ void MpegtsDemux::OnCallback(unsigned short pid, uint64_t dts, uint64_t pts) {
                 Media_Packet_Ptr new_pkt_ptr = std::make_shared<Media_Packet>();
                 new_pkt_ptr->copy_properties(pkt_ptr);
                 new_pkt_ptr->buffer_ptr_->Reset();
-                new_pkt_ptr->buffer_ptr_->AppendData((char*)data_p, len);
+                new_pkt_ptr->AppendData(data_p, len);
                 new_pkt_ptr->dts_ = dts + 20 * i;
                 new_pkt_ptr->pts_ = dts + 20 * i;
                 opus_dts_ += 20;

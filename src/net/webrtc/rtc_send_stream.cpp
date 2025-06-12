@@ -70,7 +70,7 @@ RtcSendStream::RtcSendStream(MEDIA_PKT_TYPE type,
 
 RtcSendStream::~RtcSendStream()
 {
-    LogInfof(logger_, "destruct RtcSendStream %s", avtype_tostring(media_type_).c_str());
+    LogInfof(logger_, "destruct RtcSendStream %s", avtype_tostring(media_type_));
 
     for (auto& item : send_buffer_) {
         item.last_ms     = 0;
@@ -362,7 +362,7 @@ void RtcSendStream::HandleRtcpRr(RtcpRrBlockInfo& block) {
     avg_rtt_ += (rtt_ - avg_rtt_) / 4.0;
 
     LogDebugf(logger_, "handle rtcp rr media(%s), ssrc:%u, lost total:%u, lost rate:%.03f, jitter:%u, rtt_:%.02f, avg rtt:%.02f",
-            avtype_tostring(media_type_).c_str(), ssrc_, lost_total_, lost_rate_, jitter_, rtt_, avg_rtt_);
+            avtype_tostring(media_type_), ssrc_, lost_total_, lost_rate_, jitter_, rtt_, avg_rtt_);
 
 }
 
@@ -379,7 +379,7 @@ void RtcSendStream::HandleRtcpNack(RtcpFbNack* nack_pkt) {
     }
     ss << " ]";
     LogInfof(logger_, "media ssrc:%u, type:%s, nack lost seqs:%s, avg rtt:%.02f, nack:%s",
-        nack_pkt->GetMediaSsrc(), avtype_tostring(media_type_).c_str(),
+        nack_pkt->GetMediaSsrc(), avtype_tostring(media_type_),
         ss.str().c_str(), avg_rtt_, nack_enable_ ? "enable" : "disable");
 
     if (!nack_enable_) {

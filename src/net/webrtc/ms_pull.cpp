@@ -53,8 +53,8 @@ void MsPull::ReleaseHttpClient(HttpClient*& hc) {
     }
 }
 
-std::string MsPull::StreamerName() {
-    return name_;
+const char* MsPull::StreamerName() {
+    return name_.c_str();
 }
 
 void MsPull::SetLogger(Logger* logger) {
@@ -69,7 +69,7 @@ int MsPull::AddSinker(CppStreamerInterface* sinker) {
     return sinkers_.size();
 }
 
-int MsPull::RemoveSinker(const std::string& name) {
+int MsPull::RemoveSinker(const char* name) {
     return sinkers_.erase(name);
 }
 
@@ -77,7 +77,7 @@ int MsPull::SourceData(Media_Packet_Ptr pkt_ptr) {
     return 0;
 }
 
-void MsPull::StartNetwork(const std::string& url, void* loop_handle) {
+void MsPull::StartNetwork(const char* url, void* loop_handle) {
     if (pc_) {
         delete pc_;
         pc_ = nullptr;
@@ -100,7 +100,7 @@ void MsPull::StartNetwork(const std::string& url, void* loop_handle) {
     return;
 }
 
-void MsPull::AddOption(const std::string& key, const std::string& value) {
+void MsPull::AddOption(const char* key, const char* value) {
     auto iter = options_.find(key);
     if (iter == options_.end()) {
         std::stringstream ss;
@@ -108,7 +108,7 @@ void MsPull::AddOption(const std::string& key, const std::string& value) {
         throw CppStreamException(ss.str().c_str());
     }
     options_[key] = value;
-    LogInfof(logger_, "set mediaspu broadcaster options key:%s, value:%s", key.c_str(), value.c_str());
+    LogInfof(logger_, "set mediaspu broadcaster options key:%s, value:%s", key, value);
 }
 
 void MsPull::SetReporter(StreamerReport* reporter) {
@@ -628,7 +628,7 @@ void MsPull::Report(const std::string& type, const std::string& value) {
     if (!report_) {
         return;
     }
-    report_->OnReport(name_, type, value);
+    report_->OnReport(name_.c_str(), type.c_str(), value.c_str());
 }
 
 void MsPull::OnReceiveMediaPacket(Media_Packet_Ptr pkt_ptr) {

@@ -184,7 +184,7 @@ Media_Packet_Ptr RtmpSessionBase::GetMediaPacket(CHUNK_STREAM_PTR cs_ptr) {
     pkt_ptr->dts_  = cs_ptr->timestamp32_;
     pkt_ptr->pts_  = pkt_ptr->dts_ + ts_delta;
     pkt_ptr->buffer_ptr_->Reset();
-    pkt_ptr->buffer_ptr_->AppendData(cs_ptr->chunk_data_ptr_->Data(), cs_ptr->chunk_data_ptr_->DataLen());
+    pkt_ptr->AppendData(cs_ptr->chunk_data_ptr_->Data(), cs_ptr->chunk_data_ptr_->DataLen());
 
     pkt_ptr->app_        = req_.app_;
     pkt_ptr->streamname_ = req_.stream_name_;

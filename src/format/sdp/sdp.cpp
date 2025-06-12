@@ -166,13 +166,13 @@ int SdpTransform::ParseRtpMap(const std::string& line) {
             LogInfof(logger_, "video rtx clock rate:%d", video_rtx_clock_rate_);
         } else {
             video_clock_rate_ = info.clock_rate;
-            LogInfof(logger_, "video  clock rate:%d", video_clock_rate_);
+            LogInfof(logger_, "video clock rate:%d", video_clock_rate_);
         }
     } else {
         audio_rtp_map_infos_[pt] = info;
         audio_clock_rate_ = info.clock_rate;
         channel_ = info.channel;
-        LogInfof(logger_, "audio  clock rate:%d, channel:%d", audio_clock_rate_, channel_);
+        LogInfof(logger_, "audio clock rate:%d, channel:%d", audio_clock_rate_, channel_);
     }
 
     return 0;

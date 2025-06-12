@@ -46,15 +46,11 @@ Whip::~Whip()
 
 Media_Packet_Ptr Whip::GetMediaPacket() {
     std::lock_guard<std::mutex> lock(mutex_);
-
     Media_Packet_Ptr pkt_ptr;
-    if (packet_queue_.empty()) {
-        return pkt_ptr;
+    if (packet_queue_.size()) {
+        pkt_ptr = packet_queue_.front();
+        packet_queue_.pop();
     }
-        
-    pkt_ptr = packet_queue_.front();
-    packet_queue_.pop();
-
     return pkt_ptr;
 }
 
@@ -71,8 +67,7 @@ void Whip::HandleMediaData() {
         } else if (pkt_ptr->av_type_ == MEDIA_AUDIO_TYPE) {
             pc_->SendAudioPacket(pkt_ptr);
         } else {
-            LogErrorf(logger_, "input media type error:%s",
-                    avtype_tostring(pkt_ptr->av_type_).c_str());
+            LogErrorf(logger_, "input media type error:%s", avtype_tostring(pkt_ptr->av_type_));
         }
     }
     return;
@@ -85,8 +80,8 @@ void Whip::ReleaseHttpClient() {
     }
 }
 
-std::string Whip::StreamerName() {
-    return name_;
+const char* Whip::StreamerName() {
+    return name_.c_str();
 }
 
 void Whip::SetLogger(Logger* logger) {
@@ -101,7 +96,7 @@ int Whip::AddSinker(CppStreamerInterface* sinker) {
     return sinkers_.size();
 }
 
-int Whip::RemoveSinker(const std::string& name) {
+int Whip::RemoveSinker(const char* name) {
     return sinkers_.erase(name);
 }
 
@@ -116,7 +111,7 @@ int Whip::SourceData(Media_Packet_Ptr pkt_ptr) {
     return (int)packet_queue_.size();
 }
 
-void Whip::StartNetwork(const std::string& url, void* loop_handle) {
+void Whip::StartNetwork(const char* url, void* loop_handle) {
     if (pc_) {
         delete pc_;
         pc_ = nullptr;
@@ -129,7 +124,7 @@ void Whip::StartNetwork(const std::string& url, void* loop_handle) {
 
     bool https_enable = false;
     if (!GetHostInfoByUrl(url, host_, port_, subpath_, https_enable)) {
-        CSM_THROW_ERROR("fail to get whip url by:%s", url.c_str());
+        CSM_THROW_ERROR("fail to get whip url by:%s", url);
     }
 
     Start(host_, port_, subpath_, https_enable);
@@ -137,7 +132,7 @@ void Whip::StartNetwork(const std::string& url, void* loop_handle) {
     return;
 }
 
-void Whip::AddOption(const std::string& key, const std::string& value) {
+void Whip::AddOption(const char* key, const char* value) {
     auto iter = options_.find(key);
     if (iter == options_.end()) {
         std::stringstream ss;
@@ -145,7 +140,7 @@ void Whip::AddOption(const std::string& key, const std::string& value) {
         throw CppStreamException(ss.str().c_str());
     }
     options_[key] = value;
-    LogInfof(logger_, "set whip options key:%s, value:%s", key.c_str(), value.c_str());
+    LogInfof(logger_, "set whip options key:%s, value:%s", key, value);
 }
 
 void Whip::SetReporter(StreamerReport* reporter) {
@@ -244,7 +239,7 @@ void Whip::OnState(const std::string& type, const std::string& value) {
     }
     //Report("dtls", "ready");
     if (report_) {
-        report_->OnReport(name_, type, value);
+        report_->OnReport(name_.c_str(), type.c_str(), value.c_str());
     }
 }
 

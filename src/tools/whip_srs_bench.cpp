@@ -66,7 +66,7 @@ public:
             return -1;
         }
         LogInfof(logger_, "make mpegts demux streamer:%p, name:%s", 
-                tsdemux_streamer_, tsdemux_streamer_->StreamerName().c_str());
+                tsdemux_streamer_, tsdemux_streamer_->StreamerName());
         tsdemux_streamer_->SetLogger(logger_);
         tsdemux_streamer_->AddOption("re", "true");
         tsdemux_streamer_->SetReporter(this);
@@ -93,17 +93,16 @@ public:
             return;
         }
 
-        LogWarnf(logger_, "StartWhips whip index:%lu",
-                whip_index_);
+        LogWarnf(logger_, "StartWhips whip index:%lu", whip_index_);
         size_t i = 0;
-        for (i = whip_index_; i < whip_index_ + WHIPS_INTERVAL;i++) {
+        for (i = whip_index_; i < whip_index_ + WHIPS_INTERVAL; i++) {
             if (i >= bench_count_) {
                 break;
             }
             std::string url = GetUrl(i);
             LogWarnf(logger_, "start network url:%s", url.c_str());
             try {
-                whips_[i]->StartNetwork(url, loop_);
+                whips_[i]->StartNetwork(url.c_str(), loop_);
             } catch(CppStreamException& e) {
                 LogErrorf(logger_, "whip start network exception:%s", e.what());
             }
@@ -133,33 +132,24 @@ public:
 
 private:
     int GetWhipIndex(const std::string& name) {
-        int index = -1;
-        for (CppStreamerInterface* whip : whips_) {
-            index++;
-            if (!whip) {
-                continue;
-            }
-            if (whip->StreamerName() == name) {
-                return index;
+        for (int i = 0; i < (int)whips_.size(); i++) {
+            if (whips_[i] && whips_[i]->StreamerName() == name) {
+                return i;
             }
         }
         return -1;
     }
 
 protected:
-    virtual void OnReport(const std::string& name,
-            const std::string& type,
-            const std::string& value) override {
-        LogWarnf(logger_, "report name:%s, type:%s, value:%s",
-                name.c_str(), type.c_str(), value.c_str());
-        if (type == "dtls") {
-            if (value == "ready") {
+    virtual void OnReport(const char* name, const char* type, const char* value) override {
+        LogWarnf(logger_, "report name:%s, type:%s, value:%s", name, type, value);
+        if (!strcmp(type,"dtls")) {
+            if (!strcmp(value, "ready")) {
                 int index = GetWhipIndex(name);
                 if (index < 0) {
-                    LogErrorf(logger_, "fail to find whip by name:%s", name.c_str());
+                    LogErrorf(logger_, "fail to find whip by name:%s", name);
                 } else {
-                    LogWarnf(logger_, "whip streamer is ready, index:%d, name:%s",
-                            index, name.c_str());
+                    LogWarnf(logger_, "whip streamer is ready, index:%d, name:%s", index, name);
                 }
                 whip_ready_count_++;
             }
@@ -174,7 +164,7 @@ protected:
         }
         //LogInfof(logger_, "input data len:%u", data_len);
         Media_Packet_Ptr pkt_ptr = std::make_shared<Media_Packet>();
-        pkt_ptr->buffer_ptr_->AppendData((char*)data, data_len);
+        pkt_ptr->AppendData(data, data_len);
         tsdemux_streamer_->SourceData(pkt_ptr);
         return 0;
     }
@@ -219,7 +209,7 @@ protected:
         }
         LogWarnf(logger_, "%d whip session is ready", whip_ready_count_);
 
-        FILE* file_p = fopen(src_ts_.c_str(), "r");
+        FILE* file_p = fopen(src_ts_.c_str(), "rb");
         if (!file_p) {
             LogErrorf(s_logger, "open mpegts file error:%s", src_ts_.c_str());
             AsyncClose();
@@ -320,7 +310,7 @@ int main(int argc, char** argv) {
 
     s_logger = new Logger();
     if (log_file_ready) {
-        s_logger->SetFilename(std::string(log_file));
+        s_logger->SetFilename(log_file);
     }
     s_logger->SetLevel(LOGGER_WARN_LEVEL);
 

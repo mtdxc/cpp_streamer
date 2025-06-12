@@ -31,8 +31,8 @@ RtmpPlay::~RtmpPlay()
     Release();
 }
 
-std::string RtmpPlay::StreamerName() {
-    return name_;
+const char* RtmpPlay::StreamerName() {
+    return name_.c_str();
 }
 
 void RtmpPlay::SetLogger(Logger* logger) {
@@ -47,7 +47,7 @@ int RtmpPlay::AddSinker(CppStreamerInterface* sinker) {
     return sinkers_.size();
 }
 
-int RtmpPlay::RemoveSinker(const std::string& name) {
+int RtmpPlay::RemoveSinker(const char* name) {
     return sinkers_.erase(name);
 }
 
@@ -104,13 +104,13 @@ void RtmpPlay::OnMessage(int ret_code, Media_Packet_Ptr pkt_ptr) {
             }
             Media_Packet_Ptr sps_ptr = std::make_shared<Media_Packet>(sps_len_);
             sps_ptr->copy_properties(pkt_ptr);
-            sps_ptr->buffer_ptr_->AppendData((char*)H264_START_CODE, sizeof(H264_START_CODE));
-            sps_ptr->buffer_ptr_->AppendData((char*)sps_, sps_len_);
+            sps_ptr->AppendData(H264_START_CODE, sizeof(H264_START_CODE));
+            sps_ptr->AppendData(sps_, sps_len_);
 
             Media_Packet_Ptr pps_ptr = std::make_shared<Media_Packet>(pps_len_);
             pps_ptr->copy_properties(pkt_ptr);
-            pps_ptr->buffer_ptr_->AppendData((char*)H264_START_CODE, sizeof(H264_START_CODE));
-            pps_ptr->buffer_ptr_->AppendData((char*)pps_, pps_len_);
+            pps_ptr->AppendData(H264_START_CODE, sizeof(H264_START_CODE));
+            pps_ptr->AppendData(pps_, pps_len_);
 
             for (auto sinker : sinkers_) {
                 LogInfof(logger_, "sps packet:%s", sps_ptr->Dump(true).c_str());
@@ -132,7 +132,7 @@ void RtmpPlay::OnMessage(int ret_code, Media_Packet_Ptr pkt_ptr) {
             Media_Packet_Ptr nalu_ptr = std::make_shared<Media_Packet>(db_ptr->DataLen());
 
             nalu_ptr->copy_properties(pkt_ptr);
-            nalu_ptr->buffer_ptr_->AppendData(db_ptr->Data(), db_ptr->DataLen());
+            nalu_ptr->AppendData(db_ptr->Data(), db_ptr->DataLen());
             for (auto sinker : sinkers_) {
                 sinker.second->SourceData(nalu_ptr);
             }
@@ -446,11 +446,11 @@ void RtmpPlay::Release() {
 
 void RtmpPlay::ReportEvent(const std::string& type, const std::string& value) {
     if (report_) {
-        report_->OnReport(name_, type, value);
+        report_->OnReport(name_.c_str(), type.c_str(), value.c_str());
     }
 }
 
-void RtmpPlay::StartNetwork(const std::string& url, void* loop_handle) {
+void RtmpPlay::StartNetwork(const char* url, void* loop_handle) {
     src_url_ = url;
     if (!loop_handle) {
         running_ = true;
@@ -462,7 +462,7 @@ void RtmpPlay::StartNetwork(const std::string& url, void* loop_handle) {
 
 }
 
-void RtmpPlay::AddOption(const std::string& key, const std::string& value) {
+void RtmpPlay::AddOption(const char* key, const char* value) {
 
 }
 

@@ -63,7 +63,7 @@ public:
     }
 
 public:
-    int AppendData(const char* input_data, size_t input_len) {
+    int AppendData(const void* input_data, size_t input_len) {
         if ((input_data == nullptr) || (input_len == 0)) {
             return 0;
         }

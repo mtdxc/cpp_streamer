@@ -29,8 +29,8 @@ enum LOGGER_LEVEL {
 class Logger
 {
 public:
-    Logger(const std::string filename = "", enum LOGGER_LEVEL level = LOGGER_INFO_LEVEL):filename_(filename)
-    , level_(level)
+    Logger(const char* filename = "", enum LOGGER_LEVEL level = LOGGER_INFO_LEVEL)
+        :filename_(filename), level_(level)
     {
         buffer_ = new char[buffer_len_];
     }
@@ -41,8 +41,9 @@ public:
     }
 
 public:
-    void SetFilename(const std::string& filename) {
-        filename_ = filename;
+    void SetFilename(const char* filename) {
+        if (filename)
+            filename_ = filename;
     }
     void SetLevel(enum LOGGER_LEVEL level) {
         level_ = level;
@@ -71,9 +72,7 @@ public:
     }
     void Logf(const char* level, const char* buffer) {
         std::stringstream ss;
-
-
-        ss << "[" << level << "]" << "[" << get_now_str() << "]"
+        ss << "[" << level << "]" << "[" << get_now_str() << "] "
            << buffer << "\r\n";
         
         if (filename_.empty()) {

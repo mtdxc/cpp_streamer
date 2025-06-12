@@ -30,11 +30,11 @@ std::string CppStreamerFactory::lib_path_ = DEF_LIB_PATH;
 Logger* CppStreamerFactory::s_logger_ = nullptr;
 std::map<std::string, void*> CppStreamerFactory::name2handle_;
 
-void CppStreamerFactory::SetLibPath(const std::string& path) {
+void CppStreamerFactory::SetLibPath(const char* path) {
     lib_path_ = path;
 }
 
-void* CppStreamerFactory::GetHandle(const std::string& streamer_name) {
+void* CppStreamerFactory::GetHandle(const char* streamer_name) {
     void* handle = nullptr;
     if (name2handle_.find(streamer_name) == name2handle_.end()) {
         std::string name = CppStreamerFactory::lib_path_;
@@ -62,7 +62,7 @@ void* CppStreamerFactory::GetHandle(const std::string& streamer_name) {
     return handle;
 }
 
-CppStreamerInterface* CppStreamerFactory::MakeStreamer(const std::string& streamer_name) {
+CppStreamerInterface* CppStreamerFactory::MakeStreamer(const char* streamer_name) {
     void* handle = GetHandle(streamer_name);
     
     char make_func_name[80];
@@ -76,7 +76,7 @@ CppStreamerInterface* CppStreamerFactory::MakeStreamer(const std::string& stream
     return (CppStreamerInterface*)maker_fun();
 }
 
-void CppStreamerFactory::DestroyStreamer(const std::string& streamer_name, CppStreamerInterface* streamer) {
+void CppStreamerFactory::DestroyStreamer(const char* streamer_name, CppStreamerInterface* streamer) {
     char* err_msg = nullptr;
     void* handle = GetHandle(streamer_name);
     DESTROY_STREAMER_FUN_PTR destroy_fun = (DESTROY_STREAMER_FUN_PTR)dlsym(handle, "destroy_streamer");

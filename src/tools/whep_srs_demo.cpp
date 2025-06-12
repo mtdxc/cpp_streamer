@@ -20,13 +20,10 @@ static Logger* s_logger = nullptr;
 class Whep2MpegtsStreamerMgr: public StreamerReport, public CppStreamerInterface
 {
 public:
-    Whep2MpegtsStreamerMgr(const std::string& src_url, 
-            const std::string& output_ts):ts_file_(output_ts)
-                                           , src_url_(src_url)
-    {
+    Whep2MpegtsStreamerMgr(const std::string& src_url, const std::string& output_ts)
+        : ts_file_(output_ts), src_url_(src_url) {
     }
-    virtual ~Whep2MpegtsStreamerMgr()
-    {
+    virtual ~Whep2MpegtsStreamerMgr() {
         whep_ready_ = false;
     }
 
@@ -43,67 +40,60 @@ public:
 
         whep_streamer_->AddSinker(ts_streamer_);
         ts_streamer_->AddSinker(this);
-
         return 0;
 
     }
 
     void Start() {
-        LogInfof(logger_, "start network url:%s", src_url_.c_str());
         try {
-            whep_streamer_->StartNetwork(src_url_, loop_);
+            LogInfof(logger_, "start network url:%s", src_url_.c_str());
+            whep_streamer_->StartNetwork(src_url_.c_str(), loop_);
         } catch(CppStreamException& e) {
             LogErrorf(logger_, "whep start network exception:%s", e.what());
         }
     }
 
 public:
-    virtual void OnReport(const std::string& name,
-            const std::string& type,
-            const std::string& value) override {
-        LogWarnf(logger_, "report name:%s, type:%s, value:%s",
-                name.c_str(), type.c_str(), value.c_str());
-        if (type == "dtls") {
-            if (value == "ready") {
+    virtual void OnReport(const char* name, const char* type, const char* value) override {
+        LogWarnf(logger_, "report name:%s, type:%s, value:%s", name, type, value);        
+        if (!strcmp(type, "dtls")) {
+            if (!strcmp(value, "ready")) {
                 whep_ready_ = true;
             }
         }
-        if (type == "error") {
+        if (strcmp(type, "error")) {
             whep_ready_ = false;
         }
     }
 
 public:
-    virtual std::string StreamerName() override {
+    virtual const char* StreamerName() override {
         return "whep2mpegts";
     }
     virtual void SetLogger(Logger* logger) override {
         logger_ = logger;
     }
+
     virtual int AddSinker(CppStreamerInterface* sinker) override {
         return 0;
     }
-
-    virtual int RemoveSinker(const std::string& name) override {
+    virtual int RemoveSinker(const char* name) override {
         return 0;
     }
+
     virtual int SourceData(Media_Packet_Ptr pkt_ptr) override {
         FILE* file_p = fopen(ts_file_.c_str(), "ab+");
         if (file_p) {
-            fwrite(pkt_ptr->buffer_ptr_->Data(), 1, pkt_ptr->buffer_ptr_->DataLen(), file_p);
+            fwrite(pkt_ptr->Data(), 1, pkt_ptr->Size(), file_p);
             fclose(file_p);
         }
-
         return 0;
     }
-    virtual void StartNetwork(const std::string& url, void* loop_handle) override {
-
+    virtual void StartNetwork(const char* url, void* loop_handle) override {
     }
-    virtual void AddOption(const std::string& key, const std::string& value) override {
-
+    virtual void AddOption(const char* key, const char* value) override {
     }
     virtual void SetReporter(StreamerReport* reporter) override {
-
     }
 
 
@@ -127,11 +117,11 @@ int main(int argc, char** argv) {
     char output_ts_name[516];
     char log_file[516];
 
-    int opt = 0;
     bool input_url_name_ready = false;
     bool output_ts_name_ready = false;
     bool log_file_ready = false;
 
+    int opt = 0;
     while ((opt = getopt(argc, argv, "i:o:l:h")) != -1) {
         switch (opt) {
             /*eg: http://10.0.24.12:1985/rtc/v1/whip-play/?app=live&stream=1000*/
@@ -157,7 +147,7 @@ int main(int argc, char** argv) {
 
     s_logger = new Logger();
     if (log_file_ready) {
-        s_logger->SetFilename(std::string(log_file));
+        s_logger->SetFilename(log_file);
     }
 
     CppStreamerFactory::SetLogger(s_logger);

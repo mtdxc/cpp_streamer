@@ -24,13 +24,13 @@ public:
     virtual ~Whip();
 
 public:
-    virtual std::string StreamerName() override;
+    virtual const char* StreamerName() override;
     virtual void SetLogger(Logger* logger) override;
     virtual int AddSinker(CppStreamerInterface* sinker) override;
-    virtual int RemoveSinker(const std::string& name) override;
+    virtual int RemoveSinker(const char* name) override;
     virtual int SourceData(Media_Packet_Ptr pkt_ptr) override;
-    virtual void StartNetwork(const std::string& url, void* loop_handle) override;
-    virtual void AddOption(const std::string& key, const std::string& value) override;
+    virtual void StartNetwork(const char* url, void* loop_handle) override;
+    virtual void AddOption(const char* key, const char* value) override;
     virtual void SetReporter(StreamerReport* reporter) override;
 
 protected:

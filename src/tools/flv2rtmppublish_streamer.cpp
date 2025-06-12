@@ -38,7 +38,7 @@ public:
             return -1;
         }
         LogInfof(logger_, "make flv demux streamer:%p, name:%s", 
-                flvdemux_streamer_, flvdemux_streamer_->StreamerName().c_str());
+                flvdemux_streamer_, flvdemux_streamer_->StreamerName());
         flvdemux_streamer_->SetLogger(logger_);
         flvdemux_streamer_->AddOption("re", "true");
         flvdemux_streamer_->SetReporter(this);
@@ -48,10 +48,10 @@ public:
             LogErrorf(logger_, "make streamer rtmppublish error");
             return -1;
         }
-        LogInfof(logger_, "make rtmppublish streamer:%p, name:%s", rtmppublish_streamer_, rtmppublish_streamer_->StreamerName().c_str());
+        LogInfof(logger_, "make rtmppublish streamer:%p, name:%s", rtmppublish_streamer_, rtmppublish_streamer_->StreamerName());
         rtmppublish_streamer_->SetLogger(logger_);
         rtmppublish_streamer_->SetReporter(this);
-        rtmppublish_streamer_->StartNetwork(dst_url_, loop_handle);
+        rtmppublish_streamer_->StartNetwork(dst_url_.c_str(), loop_handle);
 
         flvdemux_streamer_->AddSinker(rtmppublish_streamer_);
         return 0;
@@ -69,20 +69,18 @@ public:
     }
 
 public:
-    virtual void OnReport(const std::string& name,
-            const std::string& type,
-            const std::string& value) override {
-        LogWarnf(logger_, "report name:%s, type:%s, value:%s",
-                name.c_str(), type.c_str(), value.c_str());
-        if (type == "event") {
-            if (value == "publish") {
+    virtual void OnReport(const char* name, const char* type, const char* value) override {
+        LogWarnf(logger_, "report name:%s, type:%s, value:%s", name, type, value);
+        std::string stype = type;
+        if (stype == "event") {
+            if (!strcmp(value,"publish")) {
                 rtmp_ready_ = true;
             }
-            if (value == "close") {
+            if (!strcmp(value, "close")) {
                 rtmp_ready_ = false;
             }
         }
-        if (type == "error") {
+        if (stype == "error") {
             rtmp_ready_ = false;
         }
     }
@@ -95,7 +93,7 @@ protected:
         }
         //LogInfof(logger_, "input data len:%u", data_len);
         Media_Packet_Ptr pkt_ptr = std::make_shared<Media_Packet>();
-        pkt_ptr->buffer_ptr_->AppendData((char*)data, data_len);
+        pkt_ptr->AppendData(data, data_len);
         flvdemux_streamer_->SourceData(pkt_ptr);
         return 0;
     }
@@ -112,7 +110,7 @@ protected:
         }
         LogInfof(logger_, "rtmp is ready");
 
-        FILE* file_p = fopen(src_flv_.c_str(), "r");
+        FILE* file_p = fopen(src_flv_.c_str(), "rb");
         if (!file_p) {
             LogErrorf(s_logger, "open flv file error:%s", src_flv_.c_str());
             return;
@@ -182,7 +180,7 @@ int main(int argc, char** argv) {
 
     s_logger = new Logger();
     if (log_file_ready) {
-        s_logger->SetFilename(std::string(log_file));
+        s_logger->SetFilename(log_file);
     }
 
     CppStreamerFactory::SetLogger(s_logger);

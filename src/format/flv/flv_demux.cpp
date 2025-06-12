@@ -42,8 +42,8 @@ FlvDemuxer::~FlvDemuxer()
 {
 }
 
-std::string FlvDemuxer::StreamerName() {
-    return name_;
+const char* FlvDemuxer::StreamerName() {
+    return name_.c_str();
 }
 
 int FlvDemuxer::AddSinker(CppStreamerInterface* sinker) {
@@ -54,7 +54,7 @@ int FlvDemuxer::AddSinker(CppStreamerInterface* sinker) {
     return sinkers_.size();
 }
 
-int FlvDemuxer::RemoveSinker(const std::string& name) {
+int FlvDemuxer::RemoveSinker(const char* name) {
     return sinkers_.erase(name);
 }
 
@@ -70,7 +70,7 @@ int FlvDemuxer::SourceData(Media_Packet_Ptr pkt_ptr) {
     return InputPacket(pkt_ptr);
 }
 
-void FlvDemuxer::AddOption(const std::string& key, const std::string& value) {
+void FlvDemuxer::AddOption(const char* key, const char* value) {
     auto iter = options_.find(key);
     if (iter == options_.end()) {
         std::stringstream ss;
@@ -78,12 +78,12 @@ void FlvDemuxer::AddOption(const std::string& key, const std::string& value) {
         throw CppStreamException(ss.str().c_str());
     }
     options_[key] = value;
-    LogInfof(logger_, "set options key:%s, value:%s", key.c_str(), value.c_str());
+    LogInfof(logger_, "set options key:%s, value:%s", key, value);
 }
 
 void FlvDemuxer::Report(const std::string& type, const std::string& value) {
     if (report_) {
-        report_->OnReport(name_, type, value);
+        report_->OnReport(name_.c_str(), type.c_str(), value.c_str());
     }
 }
 
@@ -258,11 +258,11 @@ int FlvDemuxer::HandlePacket() {
                     sps_ptr->is_key_frame_ = false;
                     pps_ptr->is_key_frame_ = false;
 
-                    sps_ptr->buffer_ptr_->AppendData((char*)start_code, sizeof(start_code));
-                    pps_ptr->buffer_ptr_->AppendData((char*)start_code, sizeof(start_code));
+                    sps_ptr->AppendData(start_code, sizeof(start_code));
+                    pps_ptr->AppendData(start_code, sizeof(start_code));
 
-                    sps_ptr->buffer_ptr_->AppendData((char*)sps, sps_len);
-                    pps_ptr->buffer_ptr_->AppendData((char*)pps, pps_len);
+                    sps_ptr->AppendData(sps, sps_len);
+                    pps_ptr->AppendData(pps, pps_len);
 
                     SinkData(sps_ptr);
                     SinkData(pps_ptr);
@@ -277,7 +277,7 @@ int FlvDemuxer::HandlePacket() {
 
                 output_pkt_ptr->fmt_type_ = MEDIA_FORMAT_FLV;
                 output_pkt_ptr->buffer_ptr_->Reset();
-                output_pkt_ptr->buffer_ptr_->AppendData((char*)nalu, len);
+                output_pkt_ptr->AppendData(nalu, len);
                 SinkData(output_pkt_ptr);
                 return 0;
            }
@@ -330,11 +330,11 @@ int FlvDemuxer::HandlePacket() {
                         pkt_ptr->is_seq_hdr_ = false;
                         pkt_ptr->is_key_frame_ = true;
                     }
-                    pkt_ptr->buffer_ptr_->AppendData((char*)nalu_data, nalu_len);
+                    pkt_ptr->AppendData(nalu_data, nalu_len);
                     SinkData(pkt_ptr);
                 }
             } else {
-                output_pkt_ptr->buffer_ptr_->AppendData((char*)p + header_len, tag_data_size_ - header_len);
+                output_pkt_ptr->AppendData(p + header_len, tag_data_size_ - header_len);
                 if ((p[0] & 0xf0) == FLV_AUDIO_AAC_CODEC && p[1] == 0x00) {
                     LogInfof(logger_, "asc header len:%d", output_pkt_ptr->buffer_ptr_->DataLen() - 2);
                     LogInfoData(logger_, p + 2, output_pkt_ptr->buffer_ptr_->DataLen() - 2, "asc header");
@@ -413,13 +413,13 @@ int FlvDemuxer::DecodeMetaData(uint8_t* data, int data_len, Media_Packet_Ptr pkt
                 for (auto& amf_obj : item.amf_obj_) {
                     std::string key = amf_obj.first;
                     if (amf_obj.second->GetAmfType() == AMF_DATA_TYPE_STRING) {
-                        pkt_ptr->metadata_[key] = amf_obj.second->desc_str_;
+                        pkt_ptr->setMetaData(key.c_str(), amf_obj.second->desc_str_.c_str());
                     } else if (amf_obj.second->GetAmfType() == AMF_DATA_TYPE_NUMBER) {
                         char desc[80];
                         snprintf(desc, sizeof(desc), "%.02f", amf_obj.second->number_);
-                        pkt_ptr->metadata_[key] = std::string(desc);
+                        pkt_ptr->setMetaData(key.c_str(), desc);
                     } else if (amf_obj.second->GetAmfType() == AMF_DATA_TYPE_BOOL) {
-                        pkt_ptr->metadata_[key] = amf_obj.second->enable_ ? "true" : "false";
+                        pkt_ptr->setMetaData(key.c_str(), amf_obj.second->enable_ ? "true" : "false");
                     }
                 }
             }
@@ -458,7 +458,7 @@ int FlvDemuxer::InputPacket(Media_Packet_Ptr pkt_ptr) {
 }
 
 int FlvDemuxer::InputPacket(const uint8_t* data, size_t data_len, const std::string& key) {
-    buffer_.AppendData((char*)data, data_len);
+    buffer_.AppendData(data, data_len);
     key_ = key;
 
     int ret = 0;
