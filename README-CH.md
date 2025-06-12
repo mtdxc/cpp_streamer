@@ -27,11 +27,11 @@ cpp streamer是音视频组件，提供串流方式开发模式。
 
 ## cpp streamer应用实例
 
-* [flv转mpegts](doc/flv2mpegts.md)
-* [flv转rtmp推流](doc/flv2rtmp.md)
-* [mpegts转whip(webrtc http ingest protocol)，向srs webrtc服务推流](doc/mpegts2whip_srs.md)
-* [srs webrtc推流压测](doc/mpegts2whip_srs_bench.md)
-* [srs webrtc拉流压测](doc/whep_srs_bench.md)
-* [mediasoup broadcaster推流压测](doc/mpegts2mediasoup_push_bench.md)
-* [mediasoup broadcaster拉流压测](doc/mediasoup_pull_bench.md)
+* [flv转mpegts](doc/flv2mpegts-ch.md)
+* [flv转rtmp推流](doc/flv2rtmp-ch.md)
+* [mpegts转whip(webrtc http ingest protocol)，向srs webrtc服务推流](doc/mpegts2whip_srs-ch.md)
+* [srs webrtc推流压测](doc/mpegts2whip_srs_bench-ch.md)
+* [srs webrtc拉流压测](doc/whep_srs_bench-ch.md)
+* [mediasoup broadcaster推流压测](doc/mpegts2mediasoup_push_bench-ch.md)
+* [mediasoup broadcaster拉流压测](doc/mediasoup_pull_bench-ch.md)
 
