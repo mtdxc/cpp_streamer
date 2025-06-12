@@ -5,7 +5,6 @@
 #include <string>
 #include <random>
 #include <openssl/hmac.h>
-#include <openssl/ssl.h>
 
 namespace cpp_streamer
 {

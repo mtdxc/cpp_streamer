@@ -13,7 +13,6 @@
 #include <stdio.h>
 #include <queue>
 #include <sstream>
-#include <openssl/ssl.h>
 #include <assert.h>
 
 namespace cpp_streamer

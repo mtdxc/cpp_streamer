@@ -10,7 +10,12 @@
 #include <stdio.h>
 #include <queue>
 #include <sstream>
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
 #include <openssl/ssl.h>
+
 #include <assert.h>
 
 namespace cpp_streamer

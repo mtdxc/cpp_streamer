@@ -9,6 +9,10 @@
 #include <string>
 #include <vector>
 #include <map>
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/ec.h>

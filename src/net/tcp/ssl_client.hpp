@@ -2,7 +2,10 @@
 #define SSL_CLIENT_H
 #include "ssl_pub.hpp"
 #include "logger.hpp"
-
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
 #include <openssl/ssl.h>
 #include <string>
 #include <stdint.h>

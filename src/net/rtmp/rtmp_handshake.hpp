@@ -10,7 +10,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
 #include "openssl/evp.h"
 #include "openssl/hmac.h"
 #include "openssl/dh.h"

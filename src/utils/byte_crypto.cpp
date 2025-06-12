@@ -1,7 +1,5 @@
 #include "byte_crypto.hpp"
 #include "logger.hpp"
-#include <openssl/hmac.h>
-#include <openssl/ssl.h>
 #include <chrono>
 #include <random>
 #include <cstring>
