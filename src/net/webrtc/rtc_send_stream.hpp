@@ -105,10 +105,12 @@ private:
     RtcSendStreamCallbackI* cb_ = nullptr;
 
 private:
-    uint8_t sps_[512];
-    uint8_t pps_[512];
+    uint8_t sps_[128];
+    uint8_t pps_[64];
+    uint8_t vps_[64];
     int sps_len_ = 0;
     int pps_len_ = 0;
+    int vps_len_ = 0;
 
 private:
     std::vector<SendRtpPacketInfo> send_buffer_;

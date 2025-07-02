@@ -9,14 +9,10 @@
 namespace cpp_streamer
 {
 
-
-SdpTransform::SdpTransform(RtcDtls* dtls, Logger* logger):logger_(logger)
-                                                        , dtls_(dtls)
-{
+SdpTransform::SdpTransform(RtcDtls* dtls, Logger* logger):logger_(logger), dtls_(dtls) {
 }
 
-SdpTransform::~SdpTransform()
-{
+SdpTransform::~SdpTransform() {
 }
 
 uint32_t SdpTransform::GetVideoSsrc() {
@@ -41,7 +37,6 @@ uint32_t SdpTransform::GetAudioSsrc() {
         }
     }
     return 0;
-
 }
 
 uint32_t SdpTransform::GetVideoRtxSsrc() {
@@ -98,18 +93,16 @@ int SdpTransform::Parse(const std::string& sdp) {
 //eg. m=audio 9 UDP/TLS/RTP/SAVPF 111
 int SdpTransform::ParseM(const std::string& line) {
     size_t pos = line.find("=");
-
     if (pos == std::string::npos) {
         LogErrorf(logger_, "m= attr error:%s", line.c_str());
         return -1;
     }
     std::string m_attr = line.substr(pos + 1);
-    std::vector<std::string> attr_vec;
 
+    std::vector<std::string> attr_vec;
     StringSplit(m_attr, " ", attr_vec);
     if (attr_vec.size() < 4) {
-        LogErrorf(logger_, "m= attr error:%s, attr count:%lu", 
-                line.c_str(), attr_vec.size());
+        LogErrorf(logger_, "m= attr error:%s, attr count:%lu", line.c_str(), attr_vec.size());
         return -1;
     }
     current_is_video_ = (attr_vec[0] == "video");
@@ -143,12 +136,11 @@ int SdpTransform::ParseRtpMap(const std::string& line) {
 
     StringSplit(codec_clock_str, "/", items);
     if (items.size() < 2) {
-        LogErrorf(logger_, "rtpmap error:%s, codec clock vector size:%lu",
-                line.c_str(), items.size());
+        LogErrorf(logger_, "rtpmap error:%s, codec clock vector size:%lu", line.c_str(), items.size());
         return -1;
     }
-    RtpMapInfo info;
 
+    RtpMapInfo info;
     info.payload_type = pt;
     info.codec_type   = items[0];
     info.clock_rate   = atoi(items[1].c_str());
@@ -215,8 +207,7 @@ int SdpTransform::ParseFmtp(const std::string& line) {
 
     LogInfof(logger_, "fmtp current is %s, pt:%d, attr:%s, is_rtx:%d, pos:%lu",
             current_is_video_ ? "video" : "audio", 
-            pt, attr.c_str(),
-            info.is_rtx, pos);
+            pt, attr.c_str(), info.is_rtx, pos);
     if (current_is_video_) {
         video_fmtp_vec_.push_back(info);
     } else {
@@ -274,8 +265,8 @@ bool SdpTransform::IsAudioNackEnable() {
         }
     }
     return false;
-
 }
+
 /*
 a=extmap:1 urn:ietf:params:rtp-hdrext:ssrc-audio-level
 a=extmap:2 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time 
@@ -420,19 +411,19 @@ int SdpTransform::ParseSsrcGroupFid(const std::string& line) {
 
 int SdpTransform::ParseLine(std::string line) {
     size_t pos = 0;
-    const std::string candidate_attr("a=candidate:");
-    const std::string ufrag_attr("a=ice-ufrag:");
-    const std::string pwd_attr("a=ice-pwd:");
-    const std::string ver_attr("v=");
-    const std::string session_attr("o=");
-    const std::string session_name_attr("s=");
-    const std::string m_attr("m=");
-    const std::string rtpmap_attr("a=rtpmap");
-    const std::string fmtp_attr("a=fmtp");
-    const std::string rtcp_fb_attr("a=rtcp-fb");
-    const std::string ext_attr("a=extmap");
-    const std::string ssrc_attr("a=ssrc");
-    const std::string fid_attr = "a=ssrc-group:FID";
+    const static std::string candidate_attr("a=candidate:");
+    const static std::string ufrag_attr("a=ice-ufrag:");
+    const static std::string pwd_attr("a=ice-pwd:");
+    const static std::string ver_attr("v=");
+    const static std::string session_attr("o=");
+    const static std::string session_name_attr("s=");
+    const static std::string m_attr("m=");
+    const static std::string rtpmap_attr("a=rtpmap");
+    const static std::string fmtp_attr("a=fmtp");
+    const static std::string rtcp_fb_attr("a=rtcp-fb");
+    const static std::string ext_attr("a=extmap");
+    const static std::string ssrc_attr("a=ssrc");
+    const static std::string fid_attr = "a=ssrc-group:FID";
 
     RemoveSubfix(line, "\r");
 
@@ -1005,17 +996,15 @@ bool SdpTransform::IsVideoRtxEnable() {
    
 }
 
-int SdpTransform::GetVideoClockRate() {
-    return video_clock_rate_;
+RtcpFbInfo* findRtcpFb(std::vector<RtcpFbInfo>& vec, const char* name, int pt) {
+    for (int i = 0; i < vec.size(); i++) {
+        auto fb = vec[i];
+        if ((pt < 0 || fb.payload_type == pt)
+            && fb.attr_string == name) {
+            return &fb;
+        }
+    }
+    return nullptr;
 }
-
-int SdpTransform::GetVideoRtxClockRate() {
-    return video_rtx_clock_rate_;
-}
-
-int SdpTransform::GetAudioClockRate() {
-    return audio_clock_rate_;
-}
-
 }
 

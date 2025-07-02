@@ -94,9 +94,9 @@ void Whep::StartNetwork(const char* url, void* loop_handle) {
 void Whep::AddOption(const char* key, const char* value) {
     auto iter = options_.find(key);
     if (iter == options_.end()) {
-        std::stringstream ss;
-        ss << "the option key:" << key << " does not exist";
-        throw CppStreamException(ss.str().c_str());
+        std::string ss = "unsupported option:";
+        ss += key;
+        throw CppStreamException(ss.c_str());
     }
     options_[key] = value;
     LogInfof(logger_, "set whep options key:%s, value:%s", key, value);
@@ -108,27 +108,17 @@ void Whep::SetReporter(StreamerReport* reporter) {
 
 bool Whep::GetHostInfoByUrl(const std::string& url, std::string& host, 
             uint16_t& port, std::string& subpath, bool& https_enable) {
-    const std::string https_scheme("https://");
-    const std::string http_scheme("http://");
     std::string whep_url(url);
-    std::string scheme;
-
-    size_t pos = whep_url.find(https_scheme);
-    if (pos != 0) {
-        pos = whep_url.find(http_scheme);
-        if (pos != 0) {
-            LogErrorf(logger_, "find to find http/https scheme, url:%s", url.c_str());
-            return false;
-        }
-        scheme = http_scheme;
-        https_enable = false;
+    size_t pos = whep_url.find("://");
+    if (pos <= 0) {
+        LogErrorf(logger_, "find to find http/https scheme, url:%s", url.c_str());
+        return false;
     } else {
-        scheme = https_scheme;
-        https_enable = true;
+        https_enable = tolower(whep_url[pos -1]) == 's';
+        whep_url = whep_url.substr(pos + 3);
     }
-    whep_url = whep_url.substr(scheme.length());
-    std::vector<std::string> path_vec;
 
+    std::vector<std::string> path_vec;
     StringSplit(whep_url, "/", path_vec);
     if (path_vec.size() < 2) {
         LogErrorf(logger_, "fail to get subpath, url:%s", url.c_str());
@@ -144,7 +134,7 @@ bool Whep::GetHostInfoByUrl(const std::string& url, std::string& host,
 
     pos = host.find(":");
     if (pos == host.npos) {
-        port = 443;
+        port = https_enable?443:80;
     } else {
         std::string port_str = host.substr(pos + 1);
         host = host.substr(0, pos);
@@ -193,8 +183,7 @@ void Whep::OnState(const std::string& type, const std::string& value) {
 
     if (type == "dtls" && value == "ready") {
         int64_t diff_t = now_millisec() - start_ms_;
-        LogInfof(logger_, "whep subpath:%s, connect cost %ldms", 
-                subpath_.c_str(), diff_t);
+        LogInfof(logger_, "whep subpath:%s, connect cost %ldms", subpath_.c_str(), diff_t);
     }
     //Report("dtls", "ready");
     if (report_) {

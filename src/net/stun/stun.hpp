@@ -107,8 +107,7 @@ public:
 /*
 need to initialize:
 1) username_: 
-snprintf(username, sizeof(username), "%s:%s",
-      dtls->remote_fragment_, rtc->local_fragment_);
+snprintf(username, sizeof(username), "%s:%s", dtls->remote_fragment_, rtc->local_fragment_);
 2) add_msg_integrity_, dtls->remote_pwd_ for password_;
 ByteCrypto::GetHmacSha1(password_,...
 */

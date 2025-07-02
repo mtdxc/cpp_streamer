@@ -22,17 +22,17 @@ public:
     ~JitterBuffer();
 
 public:
-    void InputRtpPacket(int clock_rate, 
-            RtpPacket* input_pkt);
+    void InputRtpPacket(int clock_rate, RtpPacket* input_pkt);
 
 public:
     virtual void OnTimer() override;
 
 private:
+    void CheckTimeout();
+
     void InitSeq(RtpPacket* input_pkt);
     bool UpdateSeq(RtpPacket* input_pkt, int64_t& extend_seq, bool& reset);
     void OutputPacket(std::shared_ptr<RtpPacketInfo>);
-    void CheckTimeout();
     void ReportLost(std::shared_ptr<RtpPacketInfo> pkt_ptr);
 
 private:

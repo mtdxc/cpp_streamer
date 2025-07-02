@@ -6,8 +6,7 @@
 namespace cpp_streamer
 {
 
-std::vector<const char*> SRtpSession::errors =
-{
+std::vector<const char*> SRtpSession::errors = {
     // From 0 (srtp_err_status_ok) to 24 (srtp_err_status_pfkey_err).
     "success (srtp_err_status_ok)",
     "unspecified failure (srtp_err_status_fail)",
@@ -62,35 +61,33 @@ void SRtpSession::Init(Logger* logger) {
 }
 
 void SRtpSession::OnSRtpEvent(srtp_event_data_t* data) {
-    switch (data->event)
-    {
-        case event_ssrc_collision:
-            LogWarnf(SRtpSession::logger_, "SSRC collision occurred");
-            break;
+    switch (data->event) {
+    case event_ssrc_collision:
+        LogWarnf(SRtpSession::logger_, "SSRC collision occurred");
+        break;
 
-        case event_key_soft_limit:
-            LogWarnf(SRtpSession::logger_, "stream reached the soft key usage limit and will expire soon");
-            break;
+    case event_key_soft_limit:
+        LogWarnf(SRtpSession::logger_, "stream reached the soft key usage limit and will expire soon");
+        break;
 
-        case event_key_hard_limit:
-            LogWarnf(SRtpSession::logger_, "stream reached the hard key usage limit and has expired");
-            break;
+    case event_key_hard_limit:
+        LogWarnf(SRtpSession::logger_, "stream reached the hard key usage limit and has expired");
+        break;
 
-        case event_packet_index_limit:
-            LogWarnf(SRtpSession::logger_, "stream reached the hard packet limit (2^48 packets)");
-            break;
-        default:
-            LogErrorf(SRtpSession::logger_, "unkown srtp event:%d", data->event);
+    case event_packet_index_limit:
+        LogWarnf(SRtpSession::logger_, "stream reached the hard packet limit (2^48 packets)");
+        break;
+    default:
+        LogErrorf(SRtpSession::logger_, "unkown srtp event:%d", data->event);
     }
 }
 
 SRtpSession::SRtpSession(SRTP_SESSION_TYPE session_type, CRYPTO_SUITE_ENUM suite, uint8_t* key, size_t key_len)
 {
     srtp_policy_t policy;
+    memset((void*)&policy, 0, sizeof(srtp_policy_t));
 
-    std::memset((void*)&policy, 0, sizeof(srtp_policy_t));
-
-    std::string suite_desc;
+    const char* suite_desc = "";
     switch (suite) {
         case CRYPTO_SUITE_AES_CM_128_HMAC_SHA1_80:
         {
@@ -131,7 +128,7 @@ SRtpSession::SRtpSession(SRTP_SESSION_TYPE session_type, CRYPTO_SUITE_ENUM suite
                 (int)key_len, policy.rtp.cipher_key_len);
     }
 
-    std::string session_desc;
+    const char* session_desc = "";
     switch (session_type)
     {
         case SRTP_SESSION_IN_TYPE:
@@ -159,11 +156,9 @@ SRtpSession::SRtpSession(SRTP_SESSION_TYPE session_type, CRYPTO_SUITE_ENUM suite
     policy.next            = nullptr;
 
     srtp_err_status_t err = srtp_create(&session_, &policy);
-
     if (err != srtp_err_status_ok) {
         CSM_THROW_ERROR("srtp_create error: %s", SRtpSession::errors.at(err));
-    LogInfof(SRtpSession::logger_, "srtp session construct, type:<%s>, suite:%s",
-        session_desc.c_str(), suite_desc.c_str());
+        LogInfof(SRtpSession::logger_, "srtp session construct, type:<%s>, suite:%s", session_desc, suite_desc);
     }
 }
 
@@ -188,7 +183,6 @@ bool SRtpSession::EncryptRtp(uint8_t** data, size_t* len) {
     std::memcpy(encrypt_buffer_, *data, *len);
 
     srtp_err_status_t err = srtp_protect(session_, (void*)(encrypt_buffer_), (int*)(len));
-
     if (err != srtp_err_status_ok) {
         LogErrorf(SRtpSession::logger_, "srtp_protect error: %s", SRtpSession::errors.at(err));
         return false;
@@ -218,7 +212,6 @@ bool SRtpSession::EncryptRtcp(uint8_t** data, size_t* len) {
     std::memcpy(encrypt_buffer_, *data, *len);
 
     srtp_err_status_t err = srtp_protect_rtcp(session_, (void*)(encrypt_buffer_), (int*)(len));
-
     if (err != srtp_err_status_ok) {
         LogErrorf(SRtpSession::logger_, "srtp_protect_rtcp error: %s", SRtpSession::errors.at(err));
         return false;

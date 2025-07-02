@@ -135,9 +135,9 @@ void Whip::StartNetwork(const char* url, void* loop_handle) {
 void Whip::AddOption(const char* key, const char* value) {
     auto iter = options_.find(key);
     if (iter == options_.end()) {
-        std::stringstream ss;
-        ss << "the option key:" << key << " does not exist";
-        throw CppStreamException(ss.str().c_str());
+        std::string error = "unsupported option:";
+        error += key;
+        throw CppStreamException(error.c_str());
     }
     options_[key] = value;
     LogInfof(logger_, "set whip options key:%s, value:%s", key, value);
@@ -149,27 +149,17 @@ void Whip::SetReporter(StreamerReport* reporter) {
 
 bool Whip::GetHostInfoByUrl(const std::string& url, std::string& host, 
             uint16_t& port, std::string& subpath, bool& https_enable) {
-    const std::string https_scheme("https://");
-    const std::string http_scheme("http://");
     std::string whip_url(url);
-    std::string scheme;
-
-    size_t pos = whip_url.find(https_scheme);
-    if (pos != 0) {
-        pos = whip_url.find(http_scheme);
-        if (pos != 0) {
-            LogErrorf(logger_, "find to find http/https scheme, url:%s", url.c_str());
-            return false;
-        }
-        scheme = http_scheme;
-        https_enable = false;
+    size_t pos = whip_url.find("://");
+    if (pos <= 0) {
+      LogErrorf(logger_, "find to find http/https scheme, url:%s", url.c_str());
+      return false;
     } else {
-        scheme = https_scheme;
-        https_enable = true;
+        https_enable = tolower(whip_url[pos - 1]) == 's';
+        whip_url = whip_url.substr(pos + 3);
     }
-    whip_url = whip_url.substr(scheme.length());
-    std::vector<std::string> path_vec;
 
+    std::vector<std::string> path_vec;
     StringSplit(whip_url, "/", path_vec);
     if (path_vec.size() < 2) {
         LogErrorf(logger_, "fail to get subpath, url:%s", url.c_str());
@@ -184,8 +174,8 @@ bool Whip::GetHostInfoByUrl(const std::string& url, std::string& host,
     }
 
     pos = host.find(":");
-    if (pos == host.npos) {
-        port = 443;
+    if (pos == std::string::npos) {
+        port = https_enable ? 443 : 80;
     } else {
         std::string port_str = host.substr(pos + 1);
         host = host.substr(0, pos);
@@ -206,8 +196,7 @@ int Whip::Start(const std::string& host, uint16_t port, const std::string& subpa
     ReleaseHttpClient();
     std::map<std::string, std::string> headers;
     hc_ = new HttpClient(loop_, host_, port_, this, logger_, https_enable);
-    LogInfof(logger_, "http post host:%s, port:%d, subpath:%s",
-            host_.c_str(), port_, subpath.c_str());
+    LogInfof(logger_, "http post host:%s, port:%d, subpath:%s", host_.c_str(), port_, subpath.c_str());
     start_ms_ = now_millisec();
     return hc_->Post(subpath, headers, offer_sdp);
 }
@@ -234,8 +223,7 @@ void Whip::OnState(const std::string& type, const std::string& value) {
 
     if (type == "dtls" && value == "ready") {
         int64_t diff_t = now_millisec() - start_ms_;
-        LogInfof(logger_, "whip subpath:%s, connect cost %ldms", 
-                subpath_.c_str(), diff_t);
+        LogInfof(logger_, "whip subpath:%s, connect cost %ldms", subpath_.c_str(), diff_t);
     }
     //Report("dtls", "ready");
     if (report_) {

@@ -14,12 +14,10 @@ namespace cpp_streamer
 class PackHandleAudio : public PackHandleBase
 {
 public:
-    PackHandleAudio(PackCallbackI* cb, Logger* logger):cb_(cb)
-                                                       , logger_(logger)
-    {
+    PackHandleAudio(PackCallbackI* cb, Logger* logger):cb_(cb), logger_(logger) {
     }
-    virtual ~PackHandleAudio()
-    {
+    
+    virtual ~PackHandleAudio(){
     }
 
 public:

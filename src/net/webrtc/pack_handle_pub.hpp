@@ -22,12 +22,8 @@ public:
 class PackHandleBase
 {
 public:
-    PackHandleBase()
-    {
-    }
-    virtual ~PackHandleBase()
-    {
-    }
+    PackHandleBase(){}
+    virtual ~PackHandleBase(){}
     
 public:
     virtual void InputRtpPacket(std::shared_ptr<RtpPacketInfo> pkt_ptr) = 0;

@@ -36,6 +36,7 @@ typedef struct {
     int payload_type;
     std::string attr_string;
 } RtcpFbInfo;
+RtcpFbInfo* findRtcpFb(std::vector<RtcpFbInfo>& vec, const char* name, int pt = -1);
 
 typedef struct {
     int ext_id;
@@ -77,9 +78,17 @@ public:
     bool IsVideoRtxEnable();
     void SetVideoRtxFlag(bool flag);
 
-    int GetVideoClockRate();
-    int GetVideoRtxClockRate();
-    int GetAudioClockRate();
+    int GetVideoClockRate() {
+        return video_clock_rate_;
+    }
+
+    int GetVideoRtxClockRate() {
+        return video_rtx_clock_rate_;
+    }
+
+    int GetAudioClockRate() {
+        return audio_clock_rate_;
+    }
 
 private:
     int ParseLine(std::string line);

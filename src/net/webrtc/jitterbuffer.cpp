@@ -4,13 +4,9 @@
 
 namespace cpp_streamer
 {
-JitterBuffer::JitterBuffer(MEDIA_PKT_TYPE type,
-        JitterBufferCallbackI* cb, 
-        uv_loop_t* loop, 
-        Logger* logger):TimerInterface(loop, 100)
-                       , logger_(logger)
-                       , cb_(cb) 
-                       , media_type_(type){
+
+JitterBuffer::JitterBuffer(MEDIA_PKT_TYPE type, JitterBufferCallbackI* cb, uv_loop_t* loop, Logger* logger)
+    : TimerInterface(loop, 100), logger_(logger), cb_(cb), media_type_(type) {
     for (size_t i = 0; i < BUFFER_POOL_SIZE; i++) {
         pkt_buffers_[i] = new uint8_t[RTP_PACKET_MAX_SIZE];
     }
@@ -19,8 +15,7 @@ JitterBuffer::JitterBuffer(MEDIA_PKT_TYPE type,
     } else if (type == MEDIA_AUDIO_TYPE) {
         buffer_timeout_ = JITTER_BUFFER_AUDIO_TIMEOUT;
     } else {
-        CSM_THROW_ERROR("JItterBuffer construct media_type %d error",
-                type);
+        CSM_THROW_ERROR("JitterBuffer construct media_type %d error", type);
     }
 }
 
@@ -32,14 +27,13 @@ JitterBuffer::~JitterBuffer() {
     }
 }
 
-void JitterBuffer::InputRtpPacket(int clock_rate, 
-            RtpPacket* pkt) {
+void JitterBuffer::InputRtpPacket(int clock_rate, RtpPacket* pkt) {
     int64_t extend_seq = 0;
     bool reset = false;
     bool first_pkt = false;
+
     size_t index = (buffer_index_++) % RTP_PACKET_MAX_SIZE;
     uint8_t* buffer = pkt_buffers_[index];
-
     RtpPacket* input_pkt = pkt->Clone(buffer);
 
     if (!init_flag_) {
@@ -52,6 +46,7 @@ void JitterBuffer::InputRtpPacket(int clock_rate,
     } else {
         bool bad_pkt = UpdateSeq(input_pkt, extend_seq, reset);
         if (!bad_pkt) {
+            LogInfof(logger_, "jitter buffer skip rtp packet %d", pkt->GetSeq());
             return;
         }
         if (reset) {
@@ -79,9 +74,8 @@ void JitterBuffer::InputRtpPacket(int clock_rate,
         OutputPacket(pkt_info_ptr);
 
         //check the packet in map
-        for (auto iter = rtp_packets_map_.begin();
-            iter != rtp_packets_map_.end();
-            ) {
+        auto iter = rtp_packets_map_.begin();
+        while (iter != rtp_packets_map_.end()) {
             int64_t pkt_extend_seq = iter->first;
             if ((output_seq_ + 1) == pkt_extend_seq) {
                 if (iter->second->media_type_ == MEDIA_VIDEO_TYPE) {
@@ -107,8 +101,6 @@ void JitterBuffer::InputRtpPacket(int clock_rate,
     }
 
     CheckTimeout();
-
-    return;
 }
 
 void JitterBuffer::OnTimer() {
@@ -123,8 +115,8 @@ void JitterBuffer::CheckTimeout() {
     for(auto iter = rtp_packets_map_.begin();
         iter != rtp_packets_map_.end();) {
         std::shared_ptr<RtpPacketInfo> pkt_info_ptr = iter->second;
-        int64_t diff_t = now_ms - pkt_info_ptr->pkt->GetLocalMs();
 
+        int64_t diff_t = now_ms - pkt_info_ptr->pkt->GetLocalMs();
         if (diff_t > buffer_timeout_) {
             if (pkt_info_ptr->media_type_ == MEDIA_VIDEO_TYPE) {
                 LogInfof(logger_, "timeout output type:%d, seq:%d, timeout:%ld",
@@ -143,8 +135,6 @@ void JitterBuffer::CheckTimeout() {
         }
         iter++;
     }
-
-    return;
 }
 
 void JitterBuffer::ReportLost(std::shared_ptr<RtpPacketInfo> pkt_ptr) {
@@ -183,9 +173,7 @@ bool JitterBuffer::UpdateSeq(RtpPacket* input_pkt, int64_t& extend_seq, bool& re
     if (udelta < MAX_DROPOUT) {
         /* in order, with permissible gap */
         if (seq < max_seq_) {
-            /*
-             * Sequence number wrapped - count another 64K cycle.
-             */
+            // Sequence number wrapped - count another 64K cycle.
             cycles_ += RTP_SEQ_MOD;
         }
         max_seq_ = seq;

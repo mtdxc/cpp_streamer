@@ -9,10 +9,8 @@ namespace cpp_streamer
 static const uint8_t NAL_START_CODE[4] = {0, 0, 0, 1};
 static const size_t H264_STAPA_FIELD_SIZE = 2;
 
-PackHandleH264::PackHandleH264(PackCallbackI* cb, uv_loop_t* loop, Logger* logger):TimerInterface(loop, 100)
-                                                    , cb_(cb)
-                                                    , logger_(logger)
-{
+PackHandleH264::PackHandleH264(PackCallbackI* cb, uv_loop_t* loop, Logger* logger)
+    :TimerInterface(loop, 100), cb_(cb), logger_(logger) {
     StartTimer();
 }
 
@@ -34,8 +32,6 @@ void PackHandleH264::GetStartEndBit(RtpPacket* pkt, bool& start, bool& end) {
     if ((fu_header & 0x40) != 0) {
         end = true;
     }
-
-    return;
 }
 
 void PackHandleH264::OnTimer() {
@@ -312,6 +308,7 @@ bool PackHandleH264::DemuxFua(Media_Packet_Ptr h264_pkt_ptr, int64_t& timestamp)
     }
     return true;
 }
+
 void PackHandleH264::ResetRtpFua() {
     start_flag_ = false;
     end_flag_   = false;

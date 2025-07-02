@@ -64,11 +64,9 @@ static const char* openssl_get_error(RtcDtls *ctx) {
 }
 
 static int openssl_ssl_get_error(RtcDtls *ctx, int ret) {
-    SSL *dtls = ctx->dtls_;
     int r1 = SSL_ERROR_NONE;
-
-    if (ret <= 0)
-        r1 = SSL_get_error(dtls, ret);
+    if (ret <= 0 && ctx->dtls_)
+        r1 = SSL_get_error(ctx->dtls_, ret);
 
     openssl_get_error(ctx);
     return r1;
@@ -209,9 +207,7 @@ static long openssl_dtls_bio_out_callback_ex(BIO *b, int oper, const char *argp,
     return retvalue;
 }
 
-RtcDtls::RtcDtls(PeerConnection* pc, Logger* logger):logger_(logger),
-    pc_(pc)
-{
+RtcDtls::RtcDtls(PeerConnection* pc, Logger* logger):logger_(logger),pc_(pc) {
     for (auto& item : srtp_crypto_suite_vec) {
         if (!srtp_ciphers_.empty()) {
             srtp_ciphers_ += ":";
@@ -219,96 +215,26 @@ RtcDtls::RtcDtls(PeerConnection* pc, Logger* logger):logger_(logger),
         srtp_ciphers_ += item.name;
     }
 
+    fg_algorithm_ = "sha-256";
     local_fragment_ = ByteCrypto::GetRandomString(16);
     local_pwd_      = ByteCrypto::GetRandomString(32);
-
-    fg_algorithm_ = "sha-256";
-    LogInfof(logger_, "fragment:%s, user pwd:%s.\r\n",
-            local_fragment_.c_str(), local_pwd_.c_str());
+    LogInfof(logger_, "fragment:%s, user pwd:%s.", local_fragment_.c_str(), local_pwd_.c_str());
 }
 
 RtcDtls::~RtcDtls()
 {
     LogInfof(logger_, "destruct RtcDtls");
-    if(dtls_pkey_) {
-        EVP_PKEY_free(dtls_pkey_);
-        dtls_pkey_ = nullptr;
+    if (ctx_) {
+        SSL_CTX_free(ctx_); 
+        ctx_ = nullptr;
     }
-    if (dtls_eckey_) {
-        EC_KEY_free(dtls_eckey_);
-        dtls_eckey_ = nullptr;
-    }
-    if (dtls_cert_) {
-        X509_free(dtls_cert_);
-        dtls_cert_ = nullptr;
+    if (dtls_) {
+        SSL_free(dtls_);
+        dtls_ = nullptr;
     }
 }
 
-int RtcDtls::GenPrivateKey() {
-    LogInfof(logger_, "openssl version:%08x", OPENSSL_VERSION_NUMBER);
-#if OPENSSL_VERSION_NUMBER < 0x30000000L /* OpenSSL 3.0 */
-    EC_GROUP *ecgroup = NULL;
-#else
-    const char *curve = "prime256v1";
-#endif
-
-    /* Should use the curves in ClientHello.supported_groups, for example:
-     *      Supported Group: x25519 (0x001d)
-     *      Supported Group: secp256r1 (0x0017)
-     *      Supported Group: secp384r1 (0x0018)
-     * Note that secp256r1 in openssl is called NID_X9_62_prime256v1 or prime256v1 in string,
-     * not NID_secp256k1 or secp256k1 in string
-     */
-#if OPENSSL_VERSION_NUMBER < 0x30000000L /* OpenSSL 3.0 */
-    dtls_pkey_  = EVP_PKEY_new();
-    dtls_eckey_ = EC_KEY_new();
-    ecgroup     = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
-
-#if OPENSSL_VERSION_NUMBER < 0x10100000L // v1.1.x
-    /* For openssl 1.0, we must set the group parameters, so that cert is ok. */
-    EC_GROUP_set_asn1_flag(ecgroup, OPENSSL_EC_NAMED_CURVE);
-#endif
-
-    if (EC_KEY_set_group(dtls_eckey_, ecgroup) != 1) {
-        LogErrorf(logger_, "DTLS: EC_KEY_set_group failed\n");
-        EC_KEY_free(dtls_eckey_);
-        dtls_eckey_ = nullptr;
-        EC_GROUP_free(ecgroup);
-        ecgroup = nullptr;
-        return -1;
-    }
-
-    if (EC_KEY_generate_key(dtls_eckey_) != 1) {
-        LogErrorf(logger_, "DTLS: EC_KEY_generate_key failed\n");
-        EC_KEY_free(dtls_eckey_);
-        dtls_eckey_ = nullptr;
-        EC_GROUP_free(ecgroup);
-        return -1;
-    }
-
-    if (EVP_PKEY_set1_EC_KEY(dtls_pkey_, dtls_eckey_) != 1) {
-        LogErrorf(logger_, "DTLS: EVP_PKEY_set1_EC_KEY failed\n");
-        EVP_PKEY_free(dtls_pkey_);
-        dtls_pkey_ = nullptr;
-        EC_KEY_free(dtls_eckey_);
-        dtls_eckey_ = nullptr;
-        EC_GROUP_free(ecgroup);
-        return -1;
-    }
-    EC_KEY_free(dtls_eckey_);
-    EC_GROUP_free(ecgroup);
-#else
-    dtls_pkey_ = EVP_EC_gen(curve);
-    if (!dtls_pkey_) {
-        LogErrorf(logger_, "DTLS: EVP_EC_gen curve=%s failed\n", curve);
-        return -1;
-    }
-#endif
-
-    return 0;
-}
-
-int RtcDtls::SslContextInit() {
+int RtcDtls::Init() {
     /* Generate a private key to ctx->dtls_pkey. */
     if (GenPrivateKey() < 0) {
         return -1;
@@ -326,112 +252,132 @@ int RtcDtls::SslContextInit() {
     return 0;
 }
 
-int RtcDtls::GenPrivateCert() {
-    const uint8_t *aor = (uint8_t*)"cppstreamer.org";
+int RtcDtls::GenPrivateKey() {// 生成私钥
+    LogInfof(logger_, "openssl version:%08x", OPENSSL_VERSION_NUMBER);
 
-    dtls_cert_ = X509_new();
-    if (!dtls_cert_) {
+    /* Should use the curves in ClientHello.supported_groups, for example:
+     *      Supported Group: x25519 (0x001d)
+     *      Supported Group: secp256r1 (0x0017)
+     *      Supported Group: secp384r1 (0x0018)
+     * Note that secp256r1 in openssl is called NID_X9_62_prime256v1 or prime256v1 in string,
+     * not NID_secp256k1 or secp256k1 in string
+     */
+#if OPENSSL_VERSION_NUMBER < 0x30000000L /* OpenSSL 3.0 */
+    std::shared_ptr<EC_KEY> dtls_eckey_(EC_KEY_new(), &EC_KEY_free);
+    std::shared_ptr<EC_GROUP> ecgroup(EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1), &EC_GROUP_free);
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L // v1.1.x
+    /* For openssl 1.0, we must set the group parameters, so that cert is ok. */
+    EC_GROUP_set_asn1_flag(ecgroup.get(), OPENSSL_EC_NAMED_CURVE);
+#endif
+
+    if (EC_KEY_set_group(dtls_eckey_.get(), ecgroup.get()) != 1) {
+        LogErrorf(logger_, "DTLS: EC_KEY_set_group failed\n");
+        return -1;
+    }
+
+    if (EC_KEY_generate_key(dtls_eckey_.get()) != 1) {
+        LogErrorf(logger_, "DTLS: EC_KEY_generate_key failed\n");
+        return -1;
+    }
+
+    dtls_pkey_.reset(EVP_PKEY_new(), &EVP_PKEY_free);
+    if (EVP_PKEY_set1_EC_KEY(dtls_pkey_.get(), dtls_eckey_.get()) != 1) {
+        LogErrorf(logger_, "DTLS: EVP_PKEY_set1_EC_KEY failed\n");
+        dtls_pkey_ = nullptr;
+        return -1;
+    }
+#else
+    const char* curve = "prime256v1";
+    dtls_pkey_.reset(EVP_EC_gen(curve), &EVP_PKEY_free);
+    if (!dtls_pkey_) {
+        LogErrorf(logger_, "DTLS: EVP_EC_gen curve=%s failed\n", curve);
+        return -1;
+    }
+#endif
+
+    return 0;
+}
+
+int RtcDtls::GenPrivateCert() {// 生成本地证书
+    std::shared_ptr<X509> cert(X509_new(), &X509_free);
+    if (!cert) {
         LogErrorf(logger_, "X509_new error");
         return -1;
     }
 
     /* Generate a self-signed certificate. */
-    X509_NAME* subject = X509_NAME_new();
+    std::shared_ptr<X509_NAME> subject(X509_NAME_new(), X509_NAME_free);
     if (!subject) {
         LogErrorf(logger_, "X509_NAME_new error");
-        X509_free(dtls_cert_);
-        dtls_cert_ = nullptr;
         return -1;
     }
 
     int serial = (int)ByteCrypto::GetRandomUint(0, 65535);
-    if (ASN1_INTEGER_set(X509_get_serialNumber(dtls_cert_), serial) != 1) {
+    if (ASN1_INTEGER_set(X509_get_serialNumber(cert.get()), serial) != 1) {
         LogErrorf(logger_, "X509_get_serialNumber error");
-        X509_free(dtls_cert_);
-        dtls_cert_ = nullptr;
         return -1;
     }
 
-    if (X509_NAME_add_entry_by_txt(subject, "CN", MBSTRING_ASC, 
-        aor, strlen((const char*)aor), -1, 0) != 1) {
+    const char* aor = "cppstreamer.org";
+    if (X509_NAME_add_entry_by_txt(subject.get(), "CN", MBSTRING_ASC, 
+        (const uint8_t*)aor, strlen(aor), -1, 0) != 1) {
         LogErrorf(logger_, "X509_NAME_add_entry_by_txt error");
-        X509_free(dtls_cert_);
-        dtls_cert_ = nullptr;
         return -1;
     }
 
-    if (X509_set_issuer_name(dtls_cert_, subject) != 1) {
-        X509_free(dtls_cert_);
-        dtls_cert_ = nullptr;
+    if (X509_set_issuer_name(cert.get(), subject.get()) != 1) {
         LogErrorf(logger_, "X509_set_issuer_name error");
         return -1;
     }
-    if (X509_set_subject_name(dtls_cert_, subject) != 1) {
-        X509_free(dtls_cert_);
-        dtls_cert_ = nullptr;
+    if (X509_set_subject_name(cert.get(), subject.get()) != 1) {
         LogErrorf(logger_, "X509_set_subjectname error");
         return -1;
     }
 
     int expire_day = 365;
-    if (!X509_gmtime_adj(X509_get_notBefore(dtls_cert_), 0)) {
-        X509_free(dtls_cert_);
-        dtls_cert_ = nullptr;
+    if (!X509_gmtime_adj(X509_get_notBefore(cert.get()), 0)) {
         LogErrorf(logger_, "X509_get_notBefore error");
         return -1;
     }
-    if (!X509_gmtime_adj(X509_get_notAfter(dtls_cert_),
-        60*60*24*expire_day)) {
-        X509_free(dtls_cert_);
-        dtls_cert_ = nullptr;
+    if (!X509_gmtime_adj(X509_get_notAfter(cert.get()), 60*60*24*expire_day)) {
         LogErrorf(logger_, "X509_get_notAfter error");
         return -1;
     }
 
-    if (X509_set_version(dtls_cert_, 2) != 1) {
-        X509_free(dtls_cert_);
-        dtls_cert_ = nullptr;
+    if (X509_set_version(cert.get(), 2) != 1) {
         LogErrorf(logger_, "X509_set_version error");
         return -1;
     }
 
-    if (X509_set_pubkey(dtls_cert_, dtls_pkey_) != 1) {
-        X509_free(dtls_cert_);
-        dtls_cert_ = nullptr;
+    if (X509_set_pubkey(cert.get(), dtls_pkey_.get()) != 1) {
         LogErrorf(logger_, "X509_set_pubkey error");
         return -1;
     }
 
-    if (!X509_sign(dtls_cert_, dtls_pkey_, EVP_sha1())) {
-        X509_free(dtls_cert_);
-        dtls_cert_ = nullptr;
+    if (!X509_sign(cert.get(), dtls_pkey_.get(), EVP_sha1())) {
         LogErrorf(logger_, "X509_sign error");
         return -1;
     }
 
     unsigned char md[EVP_MAX_MD_SIZE];
-    unsigned int n;
+    unsigned int n, i = 0;
     /* Generate the fingerpint of certficate. */
-    if (X509_digest(dtls_cert_, EVP_sha256(), md, &n) != 1) {
-        X509_free(dtls_cert_);
-        dtls_cert_ = nullptr;
+    if (X509_digest(cert.get(), EVP_sha256(), md, &n) != 1) {
+        cert = nullptr;
         LogErrorf(logger_, "X509_digest error");
         return -1;
     }
     int len = 0;
     char fingerprint[8192];
-    for (unsigned int i = 0; i < n; i++) {
-        len += snprintf(fingerprint + len, 
-                sizeof(fingerprint) - len, "%02X", md[i]);
+    for (; i < n; i++) {
+        len += snprintf(fingerprint + len, sizeof(fingerprint) - len, "%02X", md[i]);
         if (i < n - 1) {
             len += snprintf(fingerprint + len, sizeof(fingerprint) - len, ":");
         }
     }
-
+    dtls_cert_ = cert;
     fingerprint_ = fingerprint;
-
-    X509_NAME_free(subject);
-
     return 0;
 }
 
@@ -477,11 +423,11 @@ int RtcDtls::InitContext() {
         return -1;
     }
     /* Setup the certificate. */
-    if (SSL_CTX_use_certificate(ctx_, dtls_cert_) != 1) {
+    if (SSL_CTX_use_certificate(ctx_, dtls_cert_.get()) != 1) {
         LogErrorf(logger_, "DTLS: SSL_CTX_use_certificate failed");
         return -1;
     }
-    if (SSL_CTX_use_PrivateKey(ctx_, dtls_pkey_) != 1) {
+    if (SSL_CTX_use_PrivateKey(ctx_, dtls_pkey_.get()) != 1) {
         LogErrorf(logger_, "DTLS: SSL_CTX_use_PrivateKey failed");
         return -1;
     }
@@ -561,14 +507,13 @@ int RtcDtls::OnState(enum DTLSState state, const char* type, const char* desc) {
         int64_t now_ms = now_millisec();
         dtls_closed_ = true;
         LogInfof(logger_, "WHIP: DTLS session closed, type=%s, desc=%s, elapsed=%dms",
-            type ? type : "", desc ? desc : "", RTC_ELAPSED(rtc_starttime_, now_ms));
+            SAFE_STR(type), SAFE_STR(desc), RTC_ELAPSED(rtc_starttime_, now_ms));
         return ret;
     }
 
     if (state == DTLS_STATE_FAILED) {
         state_ = DTLS_STATE_FAILED;
-        LogErrorf(logger_, "WHIP: DTLS session failed, type=%s, desc=%s",
-            type ? type : "", desc ? desc : "");
+        LogErrorf(logger_, "WHIP: DTLS session failed, type=%s, desc=%s", SAFE_STR(type), SAFE_STR(desc));
         return ret;
     }
 
@@ -663,11 +608,10 @@ int RtcDtls::OnWrite(uint8_t* data, int size) {
     LogInfof(logger_, "dtls write data len:%d, remote address:%s", 
             size, remote_address_.to_string().c_str());
     udp_client_->Write((char*)data, size, remote_address_);
-
     return 0;
 }
 
-int RtcDtls::DtlsStart()
+int RtcDtls::Start()
 {
     int ret = 0, r0, r1;
     char detail_error[256];
@@ -732,52 +676,37 @@ int RtcDtls::SetupSRtp(CRYPTO_SUITE_ENUM srtp_suite) {
         }
     }
 
-    uint8_t* srtp_material = new uint8_t[srtp_masterlength * 2];
-    uint8_t* srtp_local_key  = nullptr;
-    uint8_t* srtp_local_salt = nullptr;
-    uint8_t* srtp_remote_key = nullptr;
-    uint8_t* srtp_remote_salt = nullptr;
-    
-    uint8_t* srtp_local_masterkey  = new uint8_t[srtp_masterlength];
-    uint8_t* srtp_remote_masterkey = new uint8_t[srtp_masterlength];
-
-    int ret = SSL_export_keying_material(dtls_, srtp_material, srtp_masterlength * 2,
-                            "EXTRACTOR-dtls_srtp", strlen("EXTRACTOR-dtls_srtp"), nullptr, 0, 0);
-
+    std::vector<uint8_t> srtp_material(srtp_masterlength * 2);    
+    std::vector<uint8_t> srtp_local_masterkey(srtp_masterlength);
+    std::vector<uint8_t> srtp_remote_masterkey(srtp_masterlength);
+    const static std::string label = "EXTRACTOR-dtls_srtp";
+    int ret = SSL_export_keying_material(dtls_, srtp_material.data(), srtp_material.size(),
+                            label.data(), label.size(), nullptr, 0, 0);
     if (ret != 1) {
         LogErrorf(logger_, "SSL_export_keying_material error:%d", ret);
-        delete[] srtp_material;
-        delete[] srtp_local_masterkey;
-        delete[] srtp_remote_masterkey;
         return -1;
     }
 
 
-    srtp_remote_key  = srtp_material;
-    srtp_local_key   = srtp_remote_key + srtp_keylength;
-    srtp_remote_salt = srtp_local_key + srtp_keylength;
-    srtp_local_salt  = srtp_remote_salt + srtp_saltlength;
+    uint8_t* srtp_remote_key  = srtp_material.data();
+    uint8_t* srtp_local_key   = srtp_remote_key + srtp_keylength;
+    uint8_t* srtp_remote_salt = srtp_local_key + srtp_keylength;
+    uint8_t* srtp_local_salt  = srtp_remote_salt + srtp_saltlength;
 
-        
-    memcpy(srtp_local_masterkey, srtp_local_key, srtp_keylength);
-    memcpy(srtp_local_masterkey + srtp_keylength, srtp_local_salt, srtp_saltlength);
+    memcpy(srtp_local_masterkey.data(), srtp_local_key, srtp_keylength);
+    memcpy(srtp_local_masterkey.data() + srtp_keylength, srtp_local_salt, srtp_saltlength);
 
     // Create the SRTP remote master key.
-    memcpy(srtp_remote_masterkey, srtp_remote_key, srtp_keylength);
-    memcpy(srtp_remote_masterkey + srtp_keylength, srtp_remote_salt, srtp_saltlength);
+    memcpy(srtp_remote_masterkey.data(), srtp_remote_key, srtp_keylength);
+    memcpy(srtp_remote_masterkey.data() + srtp_keylength, srtp_remote_salt, srtp_saltlength);
 
 
     LogInfof(logger_, "srtp init connected....");
 
     //set srtp parameters
     pc_->OnDtlsConnected(srtp_suite,
-                srtp_local_masterkey, srtp_masterlength,
-                srtp_remote_masterkey, srtp_masterlength);
-
-    delete[] srtp_material;
-    delete[] srtp_local_masterkey;
-    delete[] srtp_remote_masterkey;
-
+                srtp_local_masterkey.data(), srtp_masterlength,
+                srtp_remote_masterkey.data(), srtp_masterlength);
     return 0;
 }
 

@@ -13,10 +13,8 @@ namespace cpp_streamer
 RtcSendStream::RtcSendStream(MEDIA_PKT_TYPE type, 
             uint32_t ssrc, uint8_t payload, 
             int clock_rate, bool nack, 
-            RtcSendStreamCallbackI* cb, Logger* logger):logger_(logger)
-                        , media_type_(type)
-                        , cb_(cb)
-{
+            RtcSendStreamCallbackI* cb, Logger* logger)
+    :logger_(logger), media_type_(type), cb_(cb) {
     ssrc_        = ssrc;
     pt_          = payload;
     clock_rate_  = clock_rate;
@@ -31,19 +29,15 @@ RtcSendStream::RtcSendStream(MEDIA_PKT_TYPE type,
         item.retry_count = 0;
         item.pkt = nullptr;
     }
-    LogInfof(logger, "RtcSendStream construct type:%s, ssrc:%u, payload:%d, clock rate:%d, nack:%s, rtx disable",
-            type == MEDIA_VIDEO_TYPE ? "video" : "audio",
-            ssrc, payload, clock_rate,
-            nack ? "enable" : "disable");
+    LogInfof(logger, "RtcSendStream construct type:%s, ssrc:%u, payload:%d, clock rate:%d, nack:%d, rtx 0",
+        avtype_tostring(type), ssrc, payload, clock_rate, nack);
 }
 
 RtcSendStream::RtcSendStream(MEDIA_PKT_TYPE type, 
             uint32_t ssrc, uint8_t payload, int clock_rate,
             bool nack, uint8_t rtx_payload, uint32_t rtx_ssrc,
-            RtcSendStreamCallbackI* cb, Logger* logger):logger_(logger)
-                                                    , media_type_(type)
-                                                    , cb_(cb)
-{
+            RtcSendStreamCallbackI* cb, Logger* logger)
+    :logger_(logger), media_type_(type), cb_(cb) {
     ssrc_        = ssrc;
     pt_          = payload;
     clock_rate_  = clock_rate;
@@ -60,12 +54,8 @@ RtcSendStream::RtcSendStream(MEDIA_PKT_TYPE type,
         item.retry_count = 0;
         item.pkt = nullptr;
     }
-    LogInfof(logger, "RtcSendStream construct type:%s, ssrc:%u, payload:%d, clock rate:%d, nack:%s, rtx enable, rtx payload:%d, rtx ssrc:%u",
-            type == MEDIA_VIDEO_TYPE ? "video" : "audio",
-            ssrc, payload, clock_rate,
-            nack ? "enable" : "disable",
-            rtx_payload, rtx_ssrc);
-
+    LogInfof(logger, "RtcSendStream construct type:%s, ssrc:%u, payload:%d, clock rate:%d, nack:%d, rtx 1, rtx payload:%d, rtx ssrc:%u",
+        avtype_tostring(type), ssrc, payload, clock_rate, nack, rtx_payload, rtx_ssrc);
 }
 
 RtcSendStream::~RtcSendStream()
@@ -75,7 +65,7 @@ RtcSendStream::~RtcSendStream()
     for (auto& item : send_buffer_) {
         item.last_ms     = 0;
         item.retry_count = 0;
-        if(item.pkt) {
+        if (item.pkt) {
             delete item.pkt;
             item.pkt = nullptr;
         }
@@ -110,17 +100,14 @@ void RtcSendStream::SendAudioPacket(Media_Packet_Ptr pkt_ptr) {
     ts = ts * clock_rate_ / 1000;
 
     RtpPacket* pkt = GenerateSinglePackets(data, len);
-
     pkt->SetPayloadType(pt_);
     pkt->SetSsrc(ssrc_);
     pkt->SetSeq(seq_++);
     pkt->SetTimestamp((uint32_t)ts);
     pkt->SetMarker(1);
-    //LogInfof(logger_, "send audio packet:%s",
-    //        pkt->Dump().c_str());
+    //LogInfof(logger_, "send audio packet:%s", pkt->Dump().c_str());
 
     SendAudioRtpPacket(pkt);
-
     delete pkt;
 }
 
@@ -143,8 +130,7 @@ void RtcSendStream::SendH264Packet(Media_Packet_Ptr pkt_ptr) {
     pkt_ptr->buffer_ptr_->ConsumeData(pos);
     data = (uint8_t*)pkt_ptr->buffer_ptr_->Data();
     len  = pkt_ptr->buffer_ptr_->DataLen();
-    //LogInfof(logger_, "h264 data:0x%02x",
-    //        data[0], data[1], data[2], data[3], data[4]);
+    //LogInfof(logger_, "h264 data:0x%02x", data[0], data[1], data[2], data[3], data[4]);
     if (pkt_ptr->is_seq_hdr_) {
         if (len >= sizeof(sps_)) {
             LogErrorf(logger_, "nalu sps/pps len:%lu error", len);
@@ -315,17 +301,15 @@ void RtcSendStream::ResendRtpPacket(uint16_t seq) {
     info.last_ms = now_ms;
 
     resend_cnt_++;
-    LogDebugf(logger_, "resend packet seq:%d, retry count:%d",
-            seq, info.retry_count);
-    if (!has_rtx_) {
+    LogDebugf(logger_, "resend packet seq:%d, retry count:%d", seq, info.retry_count);
+    if (has_rtx_) {
+        RtpPacket* rtx_pkt = info.pkt->Clone();
+        rtx_pkt->RtxMux(rtx_payload_, rtx_ssrc_, rtx_seq_++);
+        SendVideoRtpPacket(rtx_pkt, true);
+        delete rtx_pkt;
+    } else {
         SendVideoRtpPacket(info.pkt, true);
-        return;
     }
-    RtpPacket* rtx_pkt = info.pkt->Clone();
-    rtx_pkt->RtxMux(rtx_payload_, rtx_ssrc_, rtx_seq_++);
-    SendVideoRtpPacket(rtx_pkt, true);
-    delete rtx_pkt;
-    return;
 }
 
 void RtcSendStream::HandleRtcpRr(RtcpRrBlockInfo& block) {
@@ -396,7 +380,6 @@ void RtcSendStream::HandleXrRrt(XrRrtData* rrt_block) {
 
 void RtcSendStream::GetStatics(size_t& kbits, size_t& pps) {
     int64_t now_ms = now_millisec();
-
     kbits = statics_.BytesPerSecond(now_ms, pps) * 8 / 1000;
 }
 

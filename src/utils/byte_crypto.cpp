@@ -6,8 +6,6 @@
 
 namespace cpp_streamer
 {
-uint8_t ByteCrypto::hmac_sha1_buffer[20];
-HMAC_CTX* ByteCrypto::hmac_sha1_ctx = nullptr;
 const uint32_t ByteCrypto::crc32_table[] =
 {
     0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f, 0xe963a535, 0x9e6495a3,
@@ -44,6 +42,7 @@ const uint32_t ByteCrypto::crc32_table[] =
     0xb3667a2e, 0xc4614ab8, 0x5d681b02, 0x2a6f2b94, 0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
 };
 
+HMAC_CTX* ByteCrypto::hmac_sha1_ctx = nullptr;
 std::default_random_engine ByteCrypto::random;
 bool ByteCrypto::init_ = false;
 
@@ -55,12 +54,8 @@ void ByteCrypto::Init() {
 
     ByteCrypto::hmac_sha1_ctx = HMAC_CTX_new();
 
-    std::memset(hmac_sha1_buffer, 0, sizeof(hmac_sha1_buffer));
-
     std::chrono::system_clock::duration d = std::chrono::system_clock::now().time_since_epoch();
-
     std::chrono::milliseconds mil = std::chrono::duration_cast<std::chrono::milliseconds>(d);
-
     random = std::default_random_engine((uint32_t)(mil.count() & 0xffffffff));
 }
 
@@ -78,7 +73,6 @@ void ByteCrypto::DeInit() {
 
 uint32_t ByteCrypto::GetRandomUint(uint32_t min, uint32_t max) {
     std::uniform_int_distribution<uint32_t> dest(min, max);
-
     return dest(random);
 }
 
@@ -101,7 +95,7 @@ uint32_t ByteCrypto::GetCrc32(uint32_t crc, const uint8_t* data, size_t size) {
     return crc;
 }
 
-uint8_t* ByteCrypto::GetHmacSha1(const std::string& key, const uint8_t* data, size_t len) {
+void ByteCrypto::GetHmacSha1(const std::string& key, const uint8_t* data, size_t len, uint8_t hmac_sha1[20]) {
     int ret = 0;
 
     ret = HMAC_Init_ex(ByteCrypto::hmac_sha1_ctx, key.c_str(), key.length(), EVP_sha1(), nullptr);
@@ -111,20 +105,18 @@ uint8_t* ByteCrypto::GetHmacSha1(const std::string& key, const uint8_t* data, si
 
     ret = HMAC_Update(ByteCrypto::hmac_sha1_ctx, data, static_cast<int>(len));
     if (ret != 1) {
-        throw CppStreamException("OpenSSL HMAC_Init_ex() failed with key");
+        throw CppStreamException("OpenSSL HMAC_Update() failed");
     }
 
     uint32_t ret_len = 0;
 
-    ret = HMAC_Final(ByteCrypto::hmac_sha1_ctx, (uint8_t*)ByteCrypto::hmac_sha1_buffer, &ret_len);
+    ret = HMAC_Final(ByteCrypto::hmac_sha1_ctx, hmac_sha1, &ret_len);
     if (ret != 1) {
         throw CppStreamException("OpenSSL HMAC_Final error");
     }
     if (ret_len != 20) {
         throw CppStreamException("OpenSSL HMAC_Final error");
     }
-
-    return ByteCrypto::hmac_sha1_buffer;
 }
 
 std::string ByteCrypto::GetRandomString(size_t len) {
@@ -133,8 +125,6 @@ std::string ByteCrypto::GetRandomString(size_t len) {
     static const char chars[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b',
                                 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
                                 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z' };
-    std::default_random_engine random;
-
     if (len > MAX_LEN) {
         len = MAX_LEN;
     }

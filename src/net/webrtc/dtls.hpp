@@ -29,6 +29,7 @@ namespace cpp_streamer
 
 #define DTLS_SRTP_MASTER_KEY_LEN (16 + 16 + 14 + 14)
 #define RTC_ELAPSED(x, y) ((y) - (x))
+#define SAFE_STR(X) ((X)?(X):"")
 
 #define SRTP_AESGCM_256_MASTER_KEY_LENGTH   32
 #define SRTP_AESGCM_256_MASTER_SALT_LENGTH  12
@@ -131,15 +132,15 @@ class RtcDtls
 {
 public:
     Logger* logger_      = nullptr;
-    EVP_PKEY* dtls_pkey_ = nullptr;
-    EC_KEY* dtls_eckey_  = NULL;
-    X509 *dtls_cert_     = nullptr;
+    std::shared_ptr<EVP_PKEY> dtls_pkey_;
+    std::shared_ptr<X509> dtls_cert_;
     std::string fg_algorithm_;
     std::string fingerprint_;
 
     SSL_CTX* ctx_ = nullptr;
     SSL *dtls_    = nullptr;
     BIO *bio_in_  = nullptr;
+
     int dtls_arq_packets_ = 0;
     uint8_t dtls_last_content_type_   = 0;
     uint8_t dtls_last_handshake_type_ = 0;
@@ -160,7 +161,7 @@ public:
     int64_t dtls_handshake_starttime_ = 0;
     int64_t dtls_handshake_endtime_   = 0;
 
-    char error_message[512];
+    char error_message[512] = {0};
 
 public:
     UdpClient* udp_client_ = nullptr;
@@ -192,8 +193,8 @@ public:
     static bool IsDtls(const uint8_t* data, size_t len);
 
 public:
-    int SslContextInit();
-    int DtlsStart();
+    int Init();
+    int Start();
 
 public:
     void OnDtlsData(uint8_t* data, int size);

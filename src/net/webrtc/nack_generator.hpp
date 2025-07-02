@@ -21,14 +21,10 @@ namespace cpp_streamer
 class NACK_INFO
 {
 public:
-    NACK_INFO(uint16_t seq, int64_t sent_ms, int retry)
-    {
+    NACK_INFO(uint16_t seq, int64_t sent_ms, int retry) {
         this->seq     = seq;
         this->sent_ms = sent_ms;
         this->retry   = retry;
-    }
-    ~NACK_INFO()
-    {
     }
 
 public:

@@ -280,8 +280,7 @@ bool StunPacket::IsBindingResponse(const uint8_t *buf, size_t buf_size) {
 /*
 need to initialize:
 1) username_: 
-snprintf(username, sizeof(username), "%s:%s",
-      dtls->remote_fragment_, rtc->local_fragment_);
+snprintf(username, sizeof(username), "%s:%s", dtls->remote_fragment_, rtc->local_fragment_);
 2) add_msg_integrity_, dtls->remote_pwd_ for password_;
 ByteCrypto::GetHmacSha1(password_,...
 */
@@ -358,8 +357,8 @@ int StunPacket::Serialize() {
         //subtract message integrity and fingerprint part
         ByteStream::Write2Bytes(data_ + 2, (uint16_t)(data_len_ - 20 - 8));
 
-        uint8_t* caculate_msg_integrity = ByteCrypto::GetHmacSha1(password_,
-                                                            data_, pos);
+        uint8_t caculate_msg_integrity[20]; 
+        ByteCrypto::GetHmacSha1(password_, data_, pos, caculate_msg_integrity);
         
         ByteStream::Write2Bytes(p, STUN_MESSAGE_INTEGRITY);
         p += 2;

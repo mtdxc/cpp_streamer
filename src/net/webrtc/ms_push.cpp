@@ -9,13 +9,11 @@
 #include <stdio.h>
 
 void* make_mspush_streamer() {
-    cpp_streamer::MsPush* ms = new cpp_streamer::MsPush();
-    return ms;
+    return new cpp_streamer::MsPush();
 }
 
 void destroy_mspush_streamer(void* streamer) {
-    cpp_streamer::MsPush* ms = (cpp_streamer::MsPush*)streamer;
-    delete ms;
+    delete (cpp_streamer::MsPush*)streamer;
 }
 
 
@@ -51,20 +49,16 @@ MsPush::~MsPush()
 
 Media_Packet_Ptr MsPush::GetMediaPacket() {
     std::lock_guard<std::mutex> lock(mutex_);
-
     Media_Packet_Ptr pkt_ptr;
-    if (packet_queue_.empty()) {
-        return pkt_ptr;
+    if (packet_queue_.size()) {
+        pkt_ptr = packet_queue_.front();
+        packet_queue_.pop();
     }
-        
-    pkt_ptr = packet_queue_.front();
-    packet_queue_.pop();
-
     return pkt_ptr;
 }
 
 void MsPush::HandleMediaData() {
-    while(true) {
+    while (true) {
         Media_Packet_Ptr pkt_ptr = GetMediaPacket();
         if (!pkt_ptr) {
             break;
@@ -267,9 +261,9 @@ void MsPush::AudioProduceRequest() {
 void MsPush::AddOption(const char* key, const char* value) {
     auto iter = options_.find(key);
     if (iter == options_.end()) {
-        std::stringstream ss;
-        ss << "the option key:" << key << " does not exist";
-        throw CppStreamException(ss.str().c_str());
+        std::string ss("unsupported option:");
+        ss += key;
+        throw CppStreamException(ss.c_str());
     }
     options_[key] = value;
     LogInfof(logger_, "set mediaspu broadcaster options key:%s, value:%s", key, value);
@@ -451,28 +445,24 @@ void MsPush::HandleTransportResponse(std::shared_ptr<HttpClientResponse> resp_pt
     pc_->UpdatePcState(PC_SDP_DONE_STATE);
 
     TransportConnectRequest();
-
-    return;
 }
 
 void MsPush::HandleBroadCasterResponse(std::shared_ptr<HttpClientResponse> resp_ptr) {
+    std::string data_str(resp_ptr->data_.Data(), resp_ptr->data_.DataLen());
     if (resp_ptr->status_code_ != 200) {
-        std::string data_str(resp_ptr->data_.Data(), resp_ptr->data_.DataLen());
         LogErrorf(logger_, "http broadcaster response state:%d, resp:%s", 
                 resp_ptr->status_code_, data_str.c_str());
         return;
     }
-    Report("broadcaster", "ready");
-    std::string data_str(resp_ptr->data_.Data(), resp_ptr->data_.DataLen());
 
+    Report("broadcaster", "ready");
     LogInfof(logger_, "http broad caster response:%s", data_str.c_str());
 
     TransportRequest();
 }
 
 void MsPush::OnState(const std::string& type, const std::string& value) {
-    LogDebugf(logger_, "mediasoup state type:%s, value:%s",
-            type.c_str(), value.c_str());
+    LogDebugf(logger_, "mediasoup state type:%s, value:%s", type.c_str(), value.c_str());
     if (type == "dtls" && value == "ready") {
         int64_t diff_t = now_millisec() - start_ms_;
         LogInfof(logger_, "mediasoup connect cost %ldms", diff_t);

@@ -143,7 +143,6 @@ typedef struct RtpCommonHeaderS
 
 inline std::string RtpHeaderDump(RtpCommonHeader* header) {
     std::stringstream ss;
-
     ss << "rtp common header, version:" << header->version
         << ", padding:" << header->padding
         << ", extension:" << header->extension
@@ -181,10 +180,8 @@ inline uint16_t GetRtcpLength(RtcpCommonHeader* header) {
 
 inline std::string RtcpHeaderDump(RtcpCommonHeader* header) {
     std::stringstream ss;
-
     ss << "rtcp common header, version:" << (int)header->version << ", padding:" << (int)header->padding << ", count:" << (int)header->count;
     ss << ", payloadtype:" << (int)header->packet_type << ", length:" << GetRtcpLength(header) << "\r\n";
-
     return ss.str();
 }
 
@@ -203,8 +200,7 @@ inline bool SeqHigherThan(uint16_t seq1, uint16_t seq2) {
     if (seq1 == seq2) {
         return false;
     }
-    bool ret = SeqLowerThan(seq1, seq2);
-    return !ret;
+    return !SeqLowerThan(seq1, seq2);
 }
 
 }

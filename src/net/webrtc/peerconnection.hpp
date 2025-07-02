@@ -1,5 +1,6 @@
 #ifndef PEER_CONNECTION_HPP
 #define PEER_CONNECTION_HPP
+
 #include "logger.hpp"
 #include "dtls.hpp"
 #include "sdp.hpp"
@@ -29,35 +30,7 @@ typedef enum {
     ABS_CAPTURE_TIME_TYPE
 } RTP_EXT_TYPE;
 
-inline RTP_EXT_TYPE GetRtpExtType(const std::string& uri) {
-    RTP_EXT_TYPE ret_type;
-    if(uri == "urn:ietf:params:rtp-hdrext:sdes:mid") {
-        ret_type = MID_TYPE;
-    } else if (uri == "urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id") {
-        ret_type = RTP_STREAMID_TYPE;
-    } else if (uri == "urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id") {
-        ret_type = RP_RTP_STREAMID_TYPE;
-    } else if (uri == "http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time") {
-        ret_type = ABS_SEND_TIME_TYPE;
-    } else if (uri == "http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01") {
-        ret_type = TCC_WIDE_TYPE;
-    } else if (uri == "urn:ietf:params:rtp-hdrext:ssrc-audio-level") {
-        ret_type = SSRC_AUDIO_LEVEL_TYPE;
-    } else if (uri == "http://tools.ietf.org/html/draft-ietf-avtext-framemarking-07") {
-        ret_type = AVTEXT_FRAMEMARKING_TYPE;
-    } else if (uri == "urn:ietf:params:rtp-hdrext:framemarking") {
-        ret_type = RTP_HDREXT_FRAMEMARKING_TYPE;
-    } else if (uri == "urn:3gpp:video-orientation") {
-        ret_type = VIDEO_ORIENTATION_TYPE;
-    } else if (uri == "urn:ietf:params:rtp-hdrext:toffset") {
-        ret_type = TOFFSET_TYPE;
-    } else if (uri == "http://www.webrtc.org/experiments/rtp-hdrext/abs-capture-time") {
-        ret_type = ABS_CAPTURE_TIME_TYPE;
-    } else {
-        CSM_THROW_ERROR("unknown rtp ext type:%s", uri.c_str());
-    }
-    return ret_type;
-}
+RTP_EXT_TYPE GetRtpExtType(const std::string& uri);
 
 typedef struct RTP_EXT_INFO_S {
     int id;
@@ -77,6 +50,7 @@ typedef enum {
     RECV_ONLY,
     SEND_RECV
 } WebRtcSdpDirection;
+const char* GetDirectionString(WebRtcSdpDirection dir);
 
 typedef enum {
     PC_INIT_STATE,
@@ -121,20 +95,30 @@ public:
     void UpdatePcState(PC_STATE pc_state);
 
 public:
-    int GetVideoMid(SDP_TYPE type);
+    int GetVideoMid(SDP_TYPE type) {
+        return (type == SDP_OFFER) ? offer_sdp_.vmid_ : answer_sdp_.vmid_;
+    }
     void SetVideoMid(SDP_TYPE type, int mid);
 
-    int GetAudioMid(SDP_TYPE type);
+    int GetAudioMid(SDP_TYPE type) {
+        return (type == SDP_OFFER) ? offer_sdp_.amid_ : answer_sdp_.amid_;
+    }
     void SetAudioMid(SDP_TYPE type, int mid);
 
     void SetVideoSsrc(SDP_TYPE type, uint32_t ssrc);
-    uint32_t GetVideoSsrc(SDP_TYPE type);
+    uint32_t GetVideoSsrc(SDP_TYPE type) {
+        return (type == SDP_OFFER) ? offer_sdp_.video_ssrc_ : answer_sdp_.video_ssrc_;
+    }
 
     void SetVideoRtxSsrc(SDP_TYPE type, uint32_t ssrc);
-    uint32_t GetVideoRtxSsrc(SDP_TYPE type);
+    uint32_t GetVideoRtxSsrc(SDP_TYPE type) {
+        return (type == SDP_OFFER) ? offer_sdp_.video_rtx_ssrc_ : answer_sdp_.video_rtx_ssrc_;
+    }
 
     void SetAudioSsrc(SDP_TYPE type, uint32_t ssrc);
-    uint32_t GetAudioSsrc(SDP_TYPE type);
+    uint32_t GetAudioSsrc(SDP_TYPE type) {
+        return (type == SDP_OFFER) ? offer_sdp_.audio_ssrc_ : answer_sdp_.audio_ssrc_;
+    }
 
     void SetVideoPayloadType(SDP_TYPE type, int payloadType);
     int GetVideoPayloadType(SDP_TYPE type);
@@ -163,17 +147,29 @@ public:
     CC_TYPE GetCCType(SDP_TYPE type);
 
     void AddRtpExtInfo(SDP_TYPE type, int id, const RTP_EXT_INFO& info);
-
-    std::vector<RtcpFbInfo> GetVideoRtcpFbInfo();
-    std::vector<RtcpFbInfo> GetAudioRtcpFbInfo();
     void GetHeaderExternId(int& offset_id, int& abs_send_time_id,
-            int& video_rotation_id, int& tcc_id,
-            int& playout_delay_id, int& video_content_id,
-            int& video_timing_id, int& color_space_id,
-            int& sdes_id, int& rtp_streamid_id,
-            int& rp_rtp_streamid_id, int& audio_level);
-    std::string GetVideoCName();
-    std::string GetAudioCName();
+        int& video_rotation_id, int& tcc_id,
+        int& playout_delay_id, int& video_content_id,
+        int& video_timing_id, int& color_space_id,
+        int& sdes_id, int& rtp_streamid_id,
+        int& rp_rtp_streamid_id, int& audio_level);
+
+    std::vector<RtcpFbInfo> GetVideoRtcpFbInfo() {
+        return offer_sdp_.video_rtcpfb_vec_;
+    }
+
+    std::vector<RtcpFbInfo> GetAudioRtcpFbInfo() {
+        return offer_sdp_.audio_rtcpfb_vec_;
+    }
+
+    std::string GetVideoCName() {
+        return offer_sdp_.video_cname_;
+    }
+
+    std::string GetAudioCName() {
+        return offer_sdp_.audio_cname_;
+    }
+
     void CreateSendStream2();
     void CreateVideoRecvStream();
     void CreateAudioRecvStream();
@@ -211,7 +207,6 @@ public:
     bool GetMsPull() { return mspull_; }
 
 private:
-    std::string GetDirectionString(WebRtcSdpDirection direction_type);
     void Report(const std::string& key, const std::string& value);
 
 private:
@@ -251,20 +246,20 @@ private:
     SdpTransform offer_sdp_;
     SdpTransform answer_sdp_;
 
-    SRtpSession* write_srtp_ = nullptr;
-    SRtpSession* read_srtp_  = nullptr;
+    std::shared_ptr<SRtpSession> write_srtp_;
+    std::shared_ptr<SRtpSession> read_srtp_;
 
 private:
     bool has_rtx_ = false;
-    RtcSendStream* video_send_stream_ = nullptr;
-    RtcSendStream* audio_send_stream_ = nullptr;
+    std::shared_ptr<RtcSendStream> video_send_stream_;
+    std::shared_ptr<RtcSendStream> audio_send_stream_;
 
 private:
-    RtcRecvStream* video_recv_stream_ = nullptr;
-    RtcRecvStream* audio_recv_stream_ = nullptr;
+    std::shared_ptr<RtcRecvStream> video_recv_stream_;
+    std::shared_ptr<RtcRecvStream> audio_recv_stream_;
 
 private:
-    NTP_TIMESTAMP last_xr_ntp_;
+    NTP_TIMESTAMP last_xr_ntp_ = {0, 0};
     int64_t last_xr_ms_ = -1;
     int64_t last_send_xr_dlrr_ms_ = -1;
 
@@ -276,8 +271,8 @@ private:
     JitterBuffer jb_audio_;
 
 private:
-    PackHandleBase* h264_pack_  = nullptr;
-    PackHandleBase* audio_pack_ = nullptr;
+    std::shared_ptr<PackHandleBase> video_pack_;
+    std::shared_ptr<PackHandleBase> audio_pack_;
     bool find_keyframe_         = false;
 
 private:

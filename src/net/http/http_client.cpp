@@ -71,7 +71,6 @@ void HttpClient::OnConnect(int ret_code) {
         return;
     }
     std::stringstream http_stream;
-
     LogInfof(logger_, "on connect code:%d", ret_code);
     if (method_ == HTTP_GET) {
         http_stream << "GET " << subpath_ << " HTTP/1.1\r\n";
@@ -92,8 +91,9 @@ void HttpClient::OnConnect(int ret_code) {
     if (method_ == HTTP_POST) {
         http_stream << post_data_;
     }
-    LogInfof(logger_, "http post:%s", http_stream.str().c_str());
-    client_->Send(http_stream.str().c_str(), http_stream.str().length());
+    auto req = http_stream.str();
+    LogInfof(logger_, "http post:%s", req.c_str());
+    client_->Send(req.c_str(), req.length());
 }
 
 void HttpClient::OnWrite(int ret_code, size_t sent_size) {

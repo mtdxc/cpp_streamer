@@ -16,13 +16,8 @@ namespace cpp_streamer
 class RtpPacketInfo
 {
 public:
-    RtpPacketInfo(MEDIA_PKT_TYPE media_type,
-            int clock_rate, 
-            RtpPacket* input_pkt, 
-            int64_t extend_seq):media_type_(media_type)
-                                , extend_seq_(extend_seq)
-                                , clock_rate_(clock_rate)
-    {
+    RtpPacketInfo(MEDIA_PKT_TYPE media_type, int clock_rate, RtpPacket* input_pkt, int64_t extend_seq)
+        :media_type_(media_type) , extend_seq_(extend_seq), clock_rate_(clock_rate) {
         this->pkt = input_pkt->Clone();
     }
 

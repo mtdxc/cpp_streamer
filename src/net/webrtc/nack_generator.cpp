@@ -8,15 +8,12 @@
 namespace cpp_streamer
 {
 
-NackGenerator::NackGenerator(uv_loop_t* loop, Logger* logger, NackGeneratorCallbackI* cb):TimerInterface(loop, NACK_DEFAULT_TIMEOUT)
-                                                                             , logger_(logger)
-    , cb_(cb)
-{
+NackGenerator::NackGenerator(uv_loop_t* loop, Logger* logger, NackGeneratorCallbackI* cb)
+    : TimerInterface(loop, NACK_DEFAULT_TIMEOUT), logger_(logger), cb_(cb) {
     StartTimer();
 }
 
-NackGenerator::~NackGenerator()
-{
+NackGenerator::~NackGenerator() {
     StopTimer();
 }
 
@@ -51,7 +48,6 @@ void NackGenerator::UpdateNackList(RtpPacket* pkt) {
         }
         /*
         std::stringstream ss;
-
         ss << "[";
         for (auto item : nack_map_) {
             ss << " " << item.first;
@@ -59,7 +55,7 @@ void NackGenerator::UpdateNackList(RtpPacket* pkt) {
         ss << " ]";
         LogInfof(logger_, "receive the old packet which is not in nack list, ssrc:%u, seq:%d, last seq:%d, payloadtype:%d, nack list:%s, rtt:%ld",
             pkt->GetSsrc(), seq, last_seq_, pkt->GetPayloadType(), ss.str().c_str(), rtt_);
-            */
+        */
         return;
     }
 

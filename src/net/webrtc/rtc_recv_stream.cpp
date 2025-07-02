@@ -21,10 +21,8 @@ RtcRecvStream::RtcRecvStream(MEDIA_PKT_TYPE type,
                                          , send_cb_(cb)
 {
     has_rtx_ = false;
-    LogInfof(logger_, "RtcRecvStream construct type:%s, ssrc:%u, payload:%d, clock rate:%d, nack:%s, rtx:disable",
-            (type == MEDIA_VIDEO_TYPE) ? "video" : "audio",
-            ssrc, payload, clock_rate,
-            nack ? "enable" : "disable");
+    LogInfof(logger_, "RtcRecvStream construct type:%s, ssrc:%u, payload:%d, clock rate:%d, nack:%d, rtx:disable",
+        avtype_tostring(type), ssrc, payload, clock_rate, nack);
 }
 
 RtcRecvStream::RtcRecvStream(MEDIA_PKT_TYPE type, 
@@ -44,16 +42,12 @@ RtcRecvStream::RtcRecvStream(MEDIA_PKT_TYPE type,
     rtx_payload_ = rtx_payload;
     rtx_ssrc_ = rtx_ssrc;
 
-    LogInfof(logger_, "RtcRecvStream construct type:%s, ssrc:%u, payload:%d, clock rate:%d, nack:%s, rtx:enable, rtx ssrc:%u, rtx payload:%d",
-            (type == MEDIA_VIDEO_TYPE) ? "video" : "audio",
-            ssrc, payload, clock_rate,
-            nack ? "enable" : "disable",
-            rtx_ssrc_, rtx_payload_);
+    LogInfof(logger_, "RtcRecvStream construct type:%s, ssrc:%u, payload:%d, clock rate:%d, nack:%d, rtx:1, rtx ssrc:%u, rtx payload:%d",
+        avtype_tostring(type), ssrc, payload, clock_rate, nack, rtx_ssrc_, rtx_payload_);
 }
 
 RtcRecvStream::~RtcRecvStream() {
-    LogInfof(logger_, "RtcRecvStream destruct type:%s",
-            (media_type_ == MEDIA_VIDEO_TYPE) ? "video" : "audio");
+    LogInfof(logger_, "RtcRecvStream destruct type:%s", avtype_tostring(media_type_));
 }
 
 void RtcRecvStream::GenerateJitter(uint32_t rtp_timestamp, int64_t recv_pkt_ms) {
@@ -172,8 +166,8 @@ int64_t RtcRecvStream::GetPacketLost() {
     if ((expected_interval <= 0) || (recv_interval <= 0)) {
         frac_lost_ = 0;
     } else {
-        //log_infof("expected_interval:%ld, recv_interval:%ld, ssrc:%u, media:%s",
-        //    expected_interval, recv_interval, ssrc_, media_type_.c_str());
+        //log_infof("expected_interval:%ld, recv_interval:%ld, ssrc:%u, media:%d",
+        //    expected_interval, recv_interval, ssrc_, media_type_);
         total_lost_ += expected_interval - recv_interval;
         frac_lost_ = std::round((double)((expected_interval - recv_interval) * 256) / expected_interval);
         lost_percent_ = (expected_interval - recv_interval) / expected_interval;

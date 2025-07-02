@@ -1,12 +1,7 @@
 #ifndef RTC_STREAM_PUB_HPP
 #define RTC_STREAM_PUB_HPP
-#include "rtp_packet.hpp"
-#include "av.hpp"
 
 #include <stdint.h>
-#include <stddef.h>
-#include <string>
-#include <cstring>
 
 namespace cpp_streamer
 {

@@ -10,13 +10,11 @@
 #include <stdio.h>
 
 void* make_mspull_streamer() {
-    cpp_streamer::MsPull* ms = new cpp_streamer::MsPull();
-    return ms;
+    return new cpp_streamer::MsPull();
 }
 
 void destroy_mspull_streamer(void* streamer) {
-    cpp_streamer::MsPull* ms = (cpp_streamer::MsPull*)streamer;
-    delete ms;
+    delete (cpp_streamer::MsPull*)streamer;
 }
 
 using json = nlohmann::json;
@@ -35,7 +33,7 @@ MsPull::MsPull()
 
 MsPull::~MsPull()
 {
-    LogInfof(logger_, "destruct mediasoup pu");
+    LogInfof(logger_, "destruct mediasoup pull");
     ReleaseHttpClient(hc_req_);
     ReleaseHttpClient(hc_transport_);
     ReleaseHttpClient(hc_video_consume_);
@@ -103,9 +101,9 @@ void MsPull::StartNetwork(const char* url, void* loop_handle) {
 void MsPull::AddOption(const char* key, const char* value) {
     auto iter = options_.find(key);
     if (iter == options_.end()) {
-        std::stringstream ss;
-        ss << "the option key:" << key << " does not exist";
-        throw CppStreamException(ss.str().c_str());
+        std::string ss = "unsupported option:";
+        ss += key;
+        throw CppStreamException(ss.c_str());
     }
     options_[key] = value;
     LogInfof(logger_, "set mediaspu broadcaster options key:%s, value:%s", key, value);
@@ -115,7 +113,9 @@ void MsPull::SetReporter(StreamerReport* reporter) {
     report_ = reporter;
 }
 
-bool MsPull::GetHostInfoByUrl(const std::string& url, std::string& host, uint16_t& port, std::string& roomId, std::string& userId, 
+bool MsPull::GetHostInfoByUrl(const std::string& url, 
+        std::string& host, uint16_t& port, 
+        std::string& roomId, std::string& userId, 
         std::string& video_produce_id,
         std::string& audio_produce_id) {
     const std::string https_scheme("https://");
@@ -241,15 +241,14 @@ void MsPull::OnHttpRead(int ret, std::shared_ptr<HttpClientResponse> resp_ptr) {
 }
 
 void MsPull::HandleBroadCasterResponse(std::shared_ptr<HttpClientResponse> resp_ptr) {
+    std::string data_str(resp_ptr->data_.Data(), resp_ptr->data_.DataLen());
     if (resp_ptr->status_code_ != 200) {
-        std::string data_str(resp_ptr->data_.Data(), resp_ptr->data_.DataLen());
         LogErrorf(logger_, "http broadcaster response state:%d, resp:%s", 
                 resp_ptr->status_code_, data_str.c_str());
         return;
     }
-    Report("broadcaster", "ready");
-    std::string data_str(resp_ptr->data_.Data(), resp_ptr->data_.DataLen());
 
+    Report("broadcaster", "ready");
     LogInfof(logger_, "http broad caster response:%s", data_str.c_str());
 
     TransportRequest();
@@ -302,8 +301,6 @@ void MsPull::HandleTransportResponse(std::shared_ptr<HttpClientResponse> resp_pt
     pc_->UpdatePcState(PC_SDP_DONE_STATE);
 
     TransportConnectRequest();
-
-    return;
 }
 
 void MsPull::HandleTransportConnectResponse(std::shared_ptr<HttpClientResponse> resp_ptr) {
@@ -378,6 +375,7 @@ void MsPull::ParseVideoConsume(const std::string& data) {
 
             pc_->SetVideoPayloadType(SDP_ANSWER, payload_type);
             pc_->SetVideoClockRate(SDP_ANSWER, clock_rate);
+
             auto rtcp_fb_array = codec["rtcpFeedback"];
             for (auto rtcp_fb : rtcp_fb_array) {
                 std::string parameter = rtcp_fb["parameter"];
@@ -414,9 +412,7 @@ void MsPull::ParseVideoConsume(const std::string& data) {
 
 void MsPull::ParseAudioConsume(const std::string& data) {
     auto ret_json = json::parse(data);
-
     audio_consume_id_ = ret_json["id"].get<std::string>();
-
     std::string prd_id = ret_json["producerId"];
     if (prd_id != audio_produce_id_) {
         CSM_THROW_ERROR("audio consume return produceId(%s) != audio produceId(%s)", prd_id.c_str(), audio_produce_id_.c_str());
@@ -561,8 +557,7 @@ void MsPull::TransportConnectRequest() {
 }
 
 void MsPull::OnState(const std::string& type, const std::string& value) {
-    LogDebugf(logger_, "mediasoup state type:%s, value:%s",
-            type.c_str(), value.c_str());
+    LogDebugf(logger_, "mediasoup state type:%s, value:%s", type.c_str(), value.c_str());
     if (type == "dtls" && value == "ready") {
         int64_t diff_t = now_millisec() - start_ms_;
         LogInfof(logger_, "mediasoup connect cost %ldms", diff_t);
@@ -587,7 +582,6 @@ void MsPull::VideoConsumeRequest() {
     headers["content-type"] = "application/json";
 
     auto req_json        = json::object();
-
     req_json["broadcasterId"] = userId_;
     req_json["transportId"]   = transport_id_;
 
@@ -612,7 +606,6 @@ void MsPull::AudioConsumeRequest() {
     headers["content-type"] = "application/json";
 
     auto req_json        = json::object();
-
     req_json["broadcasterId"] = userId_;
     req_json["transportId"]   = transport_id_;
 
@@ -620,15 +613,12 @@ void MsPull::AudioConsumeRequest() {
 
     LogInfof(logger_, "http post audio consume subpath:%s, data:%s", subpath.str().c_str(), req_json.dump().c_str());
     hc_audio_consume_->Post(subpath.str(), headers, req_json.dump().c_str());
-
-
 }
 
 void MsPull::Report(const std::string& type, const std::string& value) {
-    if (!report_) {
-        return;
+    if (report_) {
+        report_->OnReport(name_.c_str(), type.c_str(), value.c_str());
     }
-    report_->OnReport(name_.c_str(), type.c_str(), value.c_str());
 }
 
 void MsPull::OnReceiveMediaPacket(Media_Packet_Ptr pkt_ptr) {
