@@ -35,10 +35,9 @@ StunPacket* StunPacket::Parse(const uint8_t* data, size_t len) {
                 Figure 3: Format of STUN Message Type Field
 */
     const uint8_t* p = data;
-    uint16_t msg_type = ByteStream::Read2Bytes(p);
-    p += 2;
-    uint16_t msg_len  = ByteStream::Read2Bytes(p);
-    p += 2;
+    uint16_t msg_type, msg_len;
+    p = ByteStream::Read2Bytes(p, msg_type);
+    p = ByteStream::Read2Bytes(p, msg_len);
 
     if (((size_t)msg_len != (len - 20)) || ((msg_len & 0x03) != 0)) {
         CSM_THROW_ERROR("stun packet message len(%d) error, len:%lu", msg_len, len);
@@ -61,10 +60,9 @@ StunPacket* StunPacket::Parse(const uint8_t* data, size_t len) {
     size_t fingerprint_pos   = 0;
 
     while ((p + 4) < (data + len)) {
-        STUN_ATTRIBUTE_ENUM attr_type = static_cast<STUN_ATTRIBUTE_ENUM>(ByteStream::Read2Bytes(p));
-        p += 2;
-        uint16_t attr_len = ByteStream::Read2Bytes(p);
-        p += 2;
+        uint16_t attr_type, attr_len;
+        p = ByteStream::Read2Bytes(p, attr_type);
+        p = ByteStream::Read2Bytes(p, attr_len);
 
         if ((p + attr_len) > (data + len)) {
             delete ret_packet;
@@ -83,7 +81,7 @@ StunPacket* StunPacket::Parse(const uint8_t* data, size_t len) {
         }
 
         const uint8_t* attr_data = p;
-        size_t skip_len = (size_t)ByteStream::PadTo4Bytes((uint16_t)(attr_len));
+        size_t skip_len = (size_t)ByteStream::PadTo4Bytes(attr_len);
         p += skip_len;
 
         switch (attr_type)
@@ -156,10 +154,8 @@ StunPacket* StunPacket::Parse(const uint8_t* data, size_t len) {
                     delete ret_packet;
                     CSM_THROW_ERROR("stun attribute error code len(%d) is not 4", attr_len);
                 }
-                attr_data += 2;
-                uint8_t error_class = *attr_data;
-                attr_data++;
-                uint8_t error_number = *attr_data;
+                uint8_t error_class = attr_data[2];
+                uint8_t error_number = attr_data[3];
                 ret_packet->error_code_ = (uint16_t)(error_class * 100 + error_number);
                 break;
             }
@@ -235,8 +231,7 @@ magic cookie, transaction ID, and message length.
    |                                                               |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
-StunPacket::StunPacket()
-{
+StunPacket::StunPacket() {
     memset(data_, 0, sizeof(data_));
 }
 
@@ -245,8 +240,7 @@ StunPacket::StunPacket(const uint8_t* data, size_t len) {
     data_len_ = len;
 }
 
-StunPacket::~StunPacket()
-{
+StunPacket::~StunPacket() {
     if (xor_address_) {
         free(xor_address_);
         xor_address_ = nullptr;
@@ -259,7 +253,6 @@ bool StunPacket::IsStun(const uint8_t* data, size_t len) {
         (data[6] == StunPacket::magic_cookie[2]) && (data[7] == StunPacket::magic_cookie[3])) {
         return true;
     }
-
     return false;
 }
 
@@ -311,43 +304,35 @@ int StunPacket::Serialize() {
     uint8_t* p = data_;
 
     uint16_t type_field = (uint16_t)STUN_METHOD_ENUM::BINDING;
+    p = ByteStream::Write2Bytes(p, type_field);
 
-    ByteStream::Write2Bytes(p, type_field);
-    p += 2;
-    ByteStream::Write2Bytes(p, 0);//set 0 first
-    p += 2;
+    // wait to write data len
+    p = ByteStream::Write2Bytes(p, 0);//set 0 first
 
-    //wait to write data len
     memcpy(p, StunPacket::magic_cookie, 4);
     p += 4;
+
     memcpy(p, transaction_id_, 12);
     p += 12;
 
     //start set attributes
     if (!username_.empty()) {
-        ByteStream::Write2Bytes(p, (uint16_t)STUN_USERNAME);
-        p += 2;
-        ByteStream::Write2Bytes(p, (uint16_t)(username_.length()));
-        p += 2;
+        p = ByteStream::Write2Bytes(p, (uint16_t)STUN_USERNAME);
+        p = ByteStream::Write2Bytes(p, (uint16_t)(username_.length()));
         memcpy(p, username_.c_str(), username_.length());
         p += user_name_pad_len;
     }
 
     //set priority
     if (priority_) {
-        ByteStream::Write2Bytes(p, (uint16_t)STUN_PRIORITY);
-        p += 2;
-        ByteStream::Write2Bytes(p, 4);
-        p += 2;
-        ByteStream::Write4Bytes(p, priority_);
-        p += 4;
+        p = ByteStream::Write2Bytes(p, (uint16_t)STUN_PRIORITY);
+        p = ByteStream::Write2Bytes(p, 4);
+        p = ByteStream::Write4Bytes(p, priority_);
     }
 
     if (has_use_candidate_) {
-        ByteStream::Write2Bytes(p, (uint16_t)STUN_USE_CANDIDATE);
-        p += 2;
-        ByteStream::Write2Bytes(p, 0);
-        p += 2;
+        p = ByteStream::Write2Bytes(p, (uint16_t)STUN_USE_CANDIDATE);
+        p = ByteStream::Write2Bytes(p, 0);
     }
 
     if (add_msg_integrity_) {
@@ -355,15 +340,13 @@ int StunPacket::Serialize() {
 
         //reset for ignore fingerprint
         //subtract message integrity and fingerprint part
-        ByteStream::Write2Bytes(data_ + 2, (uint16_t)(data_len_ - 20 - 8));
+        ByteStream::Write2Bytes(data_ + 2, (uint16_t)(data_len_ - STUN_HEADER_SIZE - 8));
 
         uint8_t caculate_msg_integrity[20]; 
         ByteCrypto::GetHmacSha1(password_, data_, pos, caculate_msg_integrity);
         
-        ByteStream::Write2Bytes(p, STUN_MESSAGE_INTEGRITY);
-        p += 2;
-        ByteStream::Write2Bytes(p, 20);
-        p += 2;
+        p = ByteStream::Write2Bytes(p, STUN_MESSAGE_INTEGRITY);
+        p = ByteStream::Write2Bytes(p, 20);
         message_integrity_ = p;
         memcpy(p, caculate_msg_integrity, 20);
         p += 20;
@@ -379,12 +362,9 @@ int StunPacket::Serialize() {
         /* xor with "STUN" */
         uint32_t caculate_fingerprint = ByteCrypto::GetCrc32(data_, pos) ^ 0x5354554e;
 
-        ByteStream::Write2Bytes(p, STUN_FINGERPRINT);
-        p += 2;
-        ByteStream::Write2Bytes(p, 4);
-        p += 2;
-        ByteStream::Write4Bytes(p, caculate_fingerprint);
-        p += 4;
+        p = ByteStream::Write2Bytes(p, STUN_FINGERPRINT);
+        p = ByteStream::Write2Bytes(p, 4);
+        p = ByteStream::Write4Bytes(p, caculate_fingerprint);
     } while(0);
 
     ByteStream::Write2Bytes(data_ + 2, (uint16_t)(data_len_- STUN_HEADER_SIZE));

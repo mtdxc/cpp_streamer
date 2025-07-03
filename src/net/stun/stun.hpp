@@ -69,7 +69,7 @@ typedef enum
 class StunPacket
 {
 public:
-    uint8_t data_[8192];
+    uint8_t data_[1536];
     size_t data_len_ = 0;
 public:
     static const uint8_t magic_cookie[];

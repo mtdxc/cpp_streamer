@@ -46,16 +46,13 @@ RtpPacket* RtpPacket::Parse(uint8_t* data, size_t len) {
         pad_len = data[len - 1];
         if (pad_len > 0) {
             if (payload_len <= pad_len) {
-                CSM_THROW_ERROR("rtp payload length(%lu), pad length(%d) error",
-                        payload_len, pad_len);
+                CSM_THROW_ERROR("rtp payload length(%lu), pad length(%d) error", payload_len, pad_len);
             }
             payload_len -= pad_len;
         }
     }
 
-    RtpPacket* pkt = new RtpPacket(header, ext, payload, payload_len, pad_len, len);
-
-    return pkt;
+    return new RtpPacket(header, ext, payload, payload_len, pad_len, len);
 }
 
 RtpPacket::RtpPacket(RtpCommonHeader* header, HeaderExtension* ext,
@@ -75,6 +72,7 @@ RtpPacket::RtpPacket(RtpCommonHeader* header, HeaderExtension* ext,
     local_ms_    = (int64_t)now_millisec();
 
     ParseExt();
+    // 不拥有数据
     need_delete_ = false;
 }
 
@@ -102,6 +100,7 @@ RtpPacket* RtpPacket::Clone(uint8_t* buffer) {
     if (buffer) {
         new_pkt->need_delete_ = false;
     } else {
+        // without buffer new in internal
         new_pkt->need_delete_ = true;
     }
     
@@ -151,7 +150,7 @@ std::string RtpPacket::Dump() {
 
         if (!twobytes_ext_map_.empty()) {
             ss << "  rtp twobytes extension:" << "\r\n";
-            for ( auto item : twobytes_ext_map_) {
+            for (auto item : twobytes_ext_map_) {
                 TwobytesExtension* item_ext = item.second;
                 ss << "    id:" << (int)item.first << ", length:" << (int)item_ext->len << "\r\n";
                 if (item.first == mid_extension_id_) {
@@ -350,10 +349,9 @@ bool RtpPacket::UpdateMid(uint8_t mid) {
         return false;
     }
 
+    // 十进制字符串方式
     std::string mid_str = std::to_string(mid);
-
     memcpy(extern_value, mid_str.c_str(), mid_str.length());
-
     //update extension length
     return UpdateExtensionLength(mid_extension_id_, mid_str.length());
 }
@@ -368,14 +366,12 @@ bool RtpPacket::ReadMid(uint8_t& mid) {
     }
     std::string mid_str((char*)extern_value, extern_len);
     mid = (uint8_t)atoi(mid_str.c_str());
-
     return true;
 }
 
 bool RtpPacket::UpdateTransportWideSeq(uint16_t seq) {
     uint8_t extern_len = 0;
     uint8_t* extern_value = GetExtension(transport_wideCc_extension_id_, extern_len);
-
     if (extern_value == nullptr) {
         LogErrorf(logger_, "The rtp packet has not extern transport wideCc id:%d", transport_wideCc_extension_id_);
         return false;
@@ -386,7 +382,7 @@ bool RtpPacket::UpdateTransportWideSeq(uint16_t seq) {
     }
     ByteStream::Write2Bytes(extern_value, seq);
 
-    //update extension length
+    //update extension length, why 3 not 2?
     return UpdateExtensionLength(transport_wideCc_extension_id_, 3);
 }
 
@@ -403,14 +399,12 @@ bool RtpPacket::GetTransportWideSeq(uint16_t& seq) {
         LogWarnf(logger_, "read transport wideCc length is not 2, extern_len:%d", extern_len);
     }
     seq = ByteStream::Read2Bytes(extern_value);
-
     return true;
 }
 
 bool RtpPacket::ReadAbsTime(uint32_t& abs_time_24bits) {
     uint8_t extern_len = 0;
     uint8_t* extern_value = GetExtension(abs_time_extension_id_, extern_len);
-
     if (extern_value == nullptr) {
         //LogErrorf(logger_, "The rtp packet has not extern abs time id:%d", abs_time_extension_id_);
         return false;
@@ -420,14 +414,12 @@ bool RtpPacket::ReadAbsTime(uint32_t& abs_time_24bits) {
         LogWarnf(logger_, "read abs time length is not 3, extern_len:%d", extern_len);
     }
     abs_time_24bits = ByteStream::Read3Bytes(extern_value);
-
     return true;
 }
 
 bool RtpPacket::UpdateAbsTime(uint32_t abs_time_24bits) {
     uint8_t extern_len = 0;
     uint8_t* extern_value = GetExtension(abs_time_extension_id_, extern_len);
-
     if (extern_value == nullptr) {
         LogErrorf(logger_, "The rtp packet has not extern abs time id:%d", abs_time_extension_id_);
         return false;
@@ -478,15 +470,15 @@ bool RtpPacket::UpdateExtensionLength(uint8_t id, uint8_t len) {
     return true;
 }
 
-void RtpPacket::RtxDemux(uint32_t ssrc, uint8_t payloadtype) {
+void RtpPacket::RtxDecode(uint8_t pt, uint32_t ssrc) {
     if (payload_len_ < 2) {
         CSM_THROW_ERROR("rtx payload len(%lu) is less than 2", payload_len_);
     }
 
-    uint16_t replace_seq = ntohs(*(uint16_t*)(payload_));
-    SetPayloadType(payloadtype);
-    SetSeq(replace_seq);
+    SetPayloadType(pt);
     SetSsrc(ssrc);
+    // SetSeq(ntohs(*(uint16_t*)(payload_)));
+    memcpy(GetData() + 2, payload_, 2); // restore seq from payload
 
     std::memmove(payload_, payload_ + 2, payload_len_ - 2);
     payload_len_ -= 2;
@@ -499,12 +491,13 @@ void RtpPacket::RtxDemux(uint32_t ssrc, uint8_t payloadtype) {
     }
 }
 
-void RtpPacket::RtxMux(uint8_t payload_type, uint32_t ssrc, uint16_t seq) {
-    SetPayloadType(payload_type);
+void RtpPacket::RtxEncode(uint8_t pt, uint32_t ssrc, uint16_t seq) {
+    SetPayloadType(pt);
     SetSsrc(ssrc);
     
     std::memmove(payload_ + 2, payload_, payload_len_);
-    ByteStream::Write2Bytes(payload_, GetSeq());
+    memcpy(payload_, GetData() + 2, 2); // save seq in payload
+    //ByteStream::Write2Bytes(payload_, GetSeq());
 
     SetSeq(seq);
 

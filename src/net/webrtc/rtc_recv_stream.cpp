@@ -76,7 +76,7 @@ void RtcRecvStream::HandleRtpPacket(RtpPacket* pkt) {
 
     if (ssrc == GetRtxSsrc()) {
         //LogInfof(logger_, "handle rtx packet:%s", pkt->Dump().c_str());
-        pkt->RtxDemux(GetSsrc(), GetPT());
+        pkt->RtxDecode(GetPT(), GetSsrc());
         //LogInfof(logger_, "handle rtx recover packet:%s", pkt->Dump().c_str());
         //LogInfof(logger_, "handle rtx recover packet seq:%d, rtx seq:%d", pkt->GetSeq(), seq);
 

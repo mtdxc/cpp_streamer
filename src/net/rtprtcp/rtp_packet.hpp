@@ -1,5 +1,6 @@
 #ifndef RTP_PACKET_HPP
 #define RTP_PACKET_HPP
+
 #include "rtprtcp_pub.hpp"
 #include <stdint.h>
 #include <stddef.h>
@@ -64,10 +65,13 @@ public:
 
 public:
     uint8_t Version() {return header_->version;}
+
     bool HasPadding() {return (header_->padding == 1) ? true : false;}
     void SetPadding(bool flag) {header_->padding = flag ? 1 : 0;}
+
     bool HasExtension() {return (header_->extension == 1) ? true : false;}
     uint8_t CsrcCount() {return header_->csrc_count;}
+
     uint8_t GetPayloadType() {return header_->payload_type;}
     void SetPayloadType(uint8_t type) {header_->payload_type = type;}
     uint8_t GetMPayloadType() {
@@ -76,10 +80,13 @@ public:
     }
     uint8_t GetMarker() {return header_->marker;}
     void SetMarker(uint8_t marker) { header_->marker = marker; }
+
     uint16_t GetSeq() {return ntohs(header_->sequence);}
     void SetSeq(uint16_t seq) {header_->sequence = htons(seq);}
+
     uint32_t GetTimestamp() {return ntohl(header_->timestamp);}
     void SetTimestamp(uint32_t ts) { header_->timestamp = (uint32_t)htonl(ts); }
+
     uint32_t GetSsrc() {return ntohl(header_->ssrc);}
     void SetSsrc(uint32_t ssrc) {header_->ssrc = (uint32_t)htonl(ssrc);}
 
@@ -110,14 +117,15 @@ public:
 
     void SetNeedDelete(bool flag) { need_delete_ = flag; }
     bool GetNeedDelete() { return need_delete_; }
+
     void EnableDebug() { debug_enable_ = true; }
     void DisableDebug() { debug_enable_ = false; }
     bool IsDebug() { return debug_enable_; }
     
     int64_t GetLocalMs() {return local_ms_;}
 
-    void RtxDemux(uint32_t ssrc, uint8_t payloadtype);
-    void RtxMux(uint8_t payload_type, uint32_t ssrc, uint16_t seq);
+    void RtxDecode(uint8_t pt, uint32_t ssrc);
+    void RtxEncode(uint8_t pt, uint32_t ssrc, uint16_t seq);
 
     std::string Dump();
     void SetLogger(Logger* logger) { logger_ = logger; }
@@ -130,6 +138,7 @@ private:
     void ParseExt();
     void ParseOnebyteExt();
     void ParseTwobytesExt();
+
     uint16_t GetExtId(HeaderExtension* rtp_ext);
     uint16_t GetExtLength(HeaderExtension* rtp_ext);
     uint8_t* GetExtValue(HeaderExtension* rtp_ext);

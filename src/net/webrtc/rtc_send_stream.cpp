@@ -304,7 +304,7 @@ void RtcSendStream::ResendRtpPacket(uint16_t seq) {
     LogDebugf(logger_, "resend packet seq:%d, retry count:%d", seq, info.retry_count);
     if (has_rtx_) {
         RtpPacket* rtx_pkt = info.pkt->Clone();
-        rtx_pkt->RtxMux(rtx_payload_, rtx_ssrc_, rtx_seq_++);
+        rtx_pkt->RtxEncode(rtx_payload_, rtx_ssrc_, rtx_seq_++);
         SendVideoRtpPacket(rtx_pkt, true);
         delete rtx_pkt;
     } else {

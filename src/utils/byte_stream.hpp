@@ -26,8 +26,11 @@ public:
     
     static uint64_t Read8Bytes(const uint8_t* data) {
         uint64_t value = 0;
+        Read8Bytes(data, value);
+        return value;
+    }
+    static const uint8_t* Read8Bytes(const uint8_t * data, uint64_t& value) {
         uint8_t* output = (uint8_t*)&value;
-
         output[7] = *data++;
         output[6] = *data++;
         output[5] = *data++;
@@ -36,13 +39,16 @@ public:
         output[2] = *data++;
         output[1] = *data++;
         output[0] = *data++;
-
-        return value;
+        return data;
     }
+
     static uint64_t Read8BytesLe(const uint8_t* data) {
         uint64_t value = 0;
+        Read8BytesLe(data, value);
+        return value;
+    }
+    static const uint8_t* Read8BytesLe(const uint8_t * data, uint64_t& value) {
         uint8_t* output = (uint8_t*)&value;
-
         output[0] = *data++;
         output[1] = *data++;
         output[2] = *data++;
@@ -51,70 +57,88 @@ public:
         output[5] = *data++;
         output[6] = *data++;
         output[7] = *data++;
-
-        return value;
+        return data;
     }
+
     static uint32_t Read4Bytes(const uint8_t* data) {
         uint32_t value = 0;
+        Read4Bytes(data, value);
+        return value;
+    }
+    static const uint8_t* Read4Bytes(const uint8_t * data, uint32_t & value) {
         uint8_t* output = (uint8_t*)&value;
-
         output[3] = *data++;
         output[2] = *data++;
         output[1] = *data++;
         output[0] = *data++;
-
-        return value;
+        return data;
     }
+
     static uint32_t Read4BytesLe(const uint8_t* data) {
         uint32_t value = 0;
+        Read4BytesLe(data, value);
+        return value;
+    }
+    static const uint8_t* Read4BytesLe(const uint8_t * data, uint32_t& value) {
         uint8_t* output = (uint8_t*)&value;
-
         output[0] = *data++;
         output[1] = *data++;
         output[2] = *data++;
         output[3] = *data++;
-
-        return value;
+        return data;
     }
+
     static uint32_t Read3Bytes(const uint8_t* data) {
         uint32_t value = 0;
+        Read3BytesLe(data, value);
+        return value;
+    }
+    static const uint8_t* Read3Bytes(const uint8_t* data, uint32_t& value) {
         uint8_t* output = (uint8_t*)&value;
-
         output[2] = *data++;
         output[1] = *data++;
         output[0] = *data++;
-
-        return value;
+        return data;
     }
+
     static uint32_t Read3BytesLe(const uint8_t* data) {
         uint32_t value = 0;
+        Read3BytesLe(data, value);
+        return value;
+    }
+    static const uint8_t* Read3BytesLe(const uint8_t* data, uint32_t& value) {
         uint8_t* output = (uint8_t*)&value;
-
         output[0] = *data++;
         output[1] = *data++;
         output[2] = *data++;
-
-        return value;
+        return data;
     }
+
     static uint16_t Read2Bytes(const uint8_t* data) {
         uint16_t value = 0;
-        uint8_t* output = (uint8_t*)&value;
-
-        output[1] = *data++;
-        output[0] = *data++;
-
+        Read2Bytes(data, value);
         return value;
     }
+    static const uint8_t* Read2Bytes(const uint8_t* data, uint16_t& value) {
+        uint8_t* output = (uint8_t*)&value;
+        output[1] = *data++;
+        output[0] = *data++;
+        return data;
+    }
+
     static uint16_t Read2BytesLe(const uint8_t* data) {
         uint16_t value = 0;
-        uint8_t* output = (uint8_t*)&value;
-
-        output[0] = *data++;
-        output[1] = *data++;
-
+        Read2BytesLe(data, value);
         return value;
     }
-    static void Write8Bytes(uint8_t* data, uint64_t value) {
+    static const uint8_t* Read2BytesLe(const uint8_t* data, uint16_t& value) {
+        uint8_t* output = (uint8_t*)&value;
+        output[0] = *data++;
+        output[1] = *data++;
+        return data;
+    }
+
+    static uint8_t* Write8Bytes(uint8_t* data, uint64_t value) {
         uint8_t* p = data;
         uint8_t* pp = (uint8_t*)&value;
 
@@ -126,8 +150,9 @@ public:
         *p++ = pp[2];
         *p++ = pp[1];
         *p++ = pp[0];
+        return p;
     }
-    static void Write8Bytes_le(uint8_t* data, uint64_t value) {
+    static uint8_t* Write8Bytes_le(uint8_t* data, uint64_t value) {
         uint8_t* p = data;
         uint8_t* pp = (uint8_t*)&value;
 
@@ -139,8 +164,9 @@ public:
         *p++ = pp[5];
         *p++ = pp[6];
         *p++ = pp[7];
+        return p;
     }
-    static void Write4Bytes(uint8_t* data, uint32_t value) {
+    static uint8_t* Write4Bytes(uint8_t* data, uint32_t value) {
         uint8_t* p = data;
         uint8_t* pp = (uint8_t*)&value;
 
@@ -148,15 +174,17 @@ public:
         *p++ = pp[2];
         *p++ = pp[1];
         *p++ = pp[0];
+        return p;
     }
-    static void Write2Bytes_le(uint8_t* data, uint32_t value) {
+    static uint8_t* Write2Bytes_le(uint8_t* data, uint32_t value) {
         uint8_t* p = data;
         uint8_t* pp = (uint8_t*)&value;
 
         *p++ = pp[0];
         *p++ = pp[1];
+        return p;
     }
-    static void Write4Bytes_le(uint8_t* data, uint32_t value) {
+    static uint8_t* Write4Bytes_le(uint8_t* data, uint32_t value) {
         uint8_t* p = data;
         uint8_t* pp = (uint8_t*)&value;
 
@@ -164,21 +192,24 @@ public:
         *p++ = pp[1];
         *p++ = pp[2];
         *p++ = pp[3];
+        return p;
     }
-    static void Write3Bytes(uint8_t* data, uint32_t value) {
+    static uint8_t* Write3Bytes(uint8_t* data, uint32_t value) {
         uint8_t* p = data;
         uint8_t* pp = (uint8_t*)&value;
 
         *p++ = pp[2];
         *p++ = pp[1];
         *p++ = pp[0];
+        return p;
     }
-    static void Write2Bytes(uint8_t* data, uint16_t value) {
+    static uint8_t* Write2Bytes(uint8_t* data, uint16_t value) {
         uint8_t* p = data;
         uint8_t* pp = (uint8_t*)&value;
 
         *p++ = pp[1];
         *p++ = pp[0];
+        return p;
     }
     
     static bool BytesIsEqual(const char* p1, const char* p2, size_t len) {
