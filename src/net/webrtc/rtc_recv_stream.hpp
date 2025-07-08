@@ -26,27 +26,23 @@ public:
             int clock_rate, bool nack, 
             RtcSendStreamCallbackI* cb,
             Logger* logger, uv_loop_t* loop);
-    RtcRecvStream(MEDIA_PKT_TYPE type, 
-            uint32_t ssrc, uint8_t payload, int clock_rate,
-            bool nack, uint8_t rtx_payload, uint32_t rtx_ssrc,
-            RtcSendStreamCallbackI* cb,
-            Logger* logger, uv_loop_t* loop);
     virtual ~RtcRecvStream();
 
 public:
     void SetSsrc(uint32_t ssrc) { ssrc_ = ssrc; }
     uint32_t GetSsrc() { return ssrc_; }
+
     void SetPT(uint8_t pt) { pt_ = pt; }
     uint8_t GetPT() { return pt_; }
+
     void SetClockRate(int clock_rate) { clock_rate_ = clock_rate; }
     int GetClockRate() { return clock_rate_; }
 
     void SetChannel(int channel) { channel_ = channel; }
     int GetChannel() { return channel_; }
 
-    void SetRtxPT(uint8_t pt) { rtx_payload_ = pt; }
+    void SetRtx(uint8_t pt, uint32_t ssrc);
     uint8_t GetRtxPT() { return rtx_payload_; }
-    void SetRtxSsrc(uint32_t ssrc) { rtx_ssrc_ = ssrc; }
     uint32_t GetRtxSsrc() { return rtx_ssrc_; }
 
 public:

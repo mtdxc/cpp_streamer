@@ -33,8 +33,7 @@ void JitterBuffer::InputRtpPacket(int clock_rate, RtpPacket* pkt) {
     bool first_pkt = false;
 
     size_t index = (buffer_index_++) % RTP_PACKET_MAX_SIZE;
-    uint8_t* buffer = pkt_buffers_[index];
-    RtpPacket* input_pkt = pkt->Clone(buffer);
+    RtpPacket* input_pkt = pkt->Clone(pkt_buffers_[index]);
 
     if (!init_flag_) {
         init_flag_ = true;
@@ -54,10 +53,7 @@ void JitterBuffer::InputRtpPacket(int clock_rate, RtpPacket* pkt) {
         }
     }
 
-    auto pkt_info_ptr = std::make_shared<RtpPacketInfo>(media_type_,
-                                                        clock_rate,
-                                                        input_pkt,
-                                                        extend_seq);
+    auto pkt_info_ptr = std::make_shared<RtpPacketInfo>(media_type_, clock_rate, input_pkt, extend_seq);
     if (reset) {
         //if the rtc client is reset, call the reset callback which send pli
         ReportLost(pkt_info_ptr);
@@ -112,8 +108,7 @@ void JitterBuffer::CheckTimeout() {
         return;
     }
     int64_t now_ms = now_millisec();
-    for(auto iter = rtp_packets_map_.begin();
-        iter != rtp_packets_map_.end();) {
+    for(auto iter = rtp_packets_map_.begin(); iter != rtp_packets_map_.end();) {
         std::shared_ptr<RtpPacketInfo> pkt_info_ptr = iter->second;
 
         int64_t diff_t = now_ms - pkt_info_ptr->pkt->GetLocalMs();
@@ -139,12 +134,10 @@ void JitterBuffer::CheckTimeout() {
 
 void JitterBuffer::ReportLost(std::shared_ptr<RtpPacketInfo> pkt_ptr) {
     int64_t now_ms = now_millisec();
-
     if (now_ms - report_lost_ts_ > 500) {
         report_lost_ts_ = now_ms;
         cb_->RtpPacketReset(pkt_ptr);
     }
-    
 }
 
 void JitterBuffer::OutputPacket(std::shared_ptr<RtpPacketInfo> pkt_ptr) {
@@ -178,21 +171,21 @@ bool JitterBuffer::UpdateSeq(RtpPacket* input_pkt, int64_t& extend_seq, bool& re
         }
         max_seq_ = seq;
     } else if (udelta <= RTP_SEQ_MOD - MAX_MISORDER) {
-            /* the sequence number made a very large jump */
-            if (seq == bad_seq_) {
-                /*
-                 * Two sequential packets -- assume that the other side
-                 * restarted without telling us so just re-sync
-                 * (i.e., pretend this was the first packet).
-                 */
-                InitSeq(input_pkt);
-                reset = true;
-                extend_seq = cycles_ + seq;
-                return true;
-            } else {
-                bad_seq_= (seq + 1) & (RTP_SEQ_MOD-1);
-                return false;
-            }
+        /* the sequence number made a very large jump */
+        if (seq == bad_seq_) {
+            /*
+                * Two sequential packets -- assume that the other side
+                * restarted without telling us so just re-sync
+                * (i.e., pretend this was the first packet).
+                */
+            InitSeq(input_pkt);
+            reset = true;
+            extend_seq = cycles_ + seq;
+            return true;
+        } else {
+            bad_seq_= (seq + 1) & (RTP_SEQ_MOD-1);
+            return false;
+        }
     } else {
         /* duplicate or reordered packet */
     }

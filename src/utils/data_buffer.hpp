@@ -16,8 +16,7 @@ namespace cpp_streamer
 class DataBuffer
 {
 public:
-    DataBuffer(size_t data_size = EXTRA_LEN)
-    {
+    DataBuffer(size_t data_size = EXTRA_LEN) {
         buffer_      = new char[data_size + PRE_RESERVE_HEADER_SIZE];
         buffer_size_ = data_size;
         start_       = PRE_RESERVE_HEADER_SIZE;
@@ -26,8 +25,7 @@ public:
         memset(buffer_, 0, data_size);
     }
 
-    DataBuffer(const DataBuffer& input)//deep copy
-    {
+    DataBuffer(const DataBuffer& input) {//deep copy
         sent_flag_     = input.sent_flag_;
         dst_ip_        = input.dst_ip_;
         dst_port_      = input.dst_port_;
@@ -40,8 +38,8 @@ public:
 
         memcpy(buffer_, input.buffer_, data_len_);
     }
-    DataBuffer& operator=(const DataBuffer& input)//deep copy
-    {
+
+    DataBuffer& operator=(const DataBuffer& input) {//deep copy
         sent_flag_     = input.sent_flag_;
         dst_ip_        = input.dst_ip_;
         dst_port_      = input.dst_port_;
@@ -55,6 +53,7 @@ public:
         memcpy(buffer_, input.buffer_, data_len_);
         return *this;
     }
+
     ~DataBuffer()
     {
         if (buffer_) {
@@ -126,10 +125,10 @@ public:
         data_len_ = 0;
     }
 
-    char* Data() {
+    const char* Data() const {
         return buffer_ + start_;
     }
-    size_t DataLen() {
+    size_t DataLen() const {
         return data_len_;
     }
     bool Require(size_t len) {
@@ -139,11 +138,17 @@ public:
         return false;
     }
 
+private:
+    bool sent_flag_ = false;
+    std::string dst_ip_;
+    uint16_t    dst_port_ = 0;
 public:
     bool GetSentFlag() { return sent_flag_; }
     void SetSentFlag(bool flag) { sent_flag_ = flag; }
+
     std::string GetDstIp() { return dst_ip_; }
     void SetDstIp(const std::string& ip) { dst_ip_ = ip; }
+
     uint16_t GetDstPort() { return dst_port_; }
     void SetDstPort(uint16_t port) { dst_port_ = port; }
 
@@ -164,11 +169,6 @@ private:
         }
         return ret;
     }
-
-private:
-    bool sent_flag_     = false;
-    std::string dst_ip_;
-    uint16_t    dst_port_ = 0;
 
 private:
     char* buffer_       = nullptr;

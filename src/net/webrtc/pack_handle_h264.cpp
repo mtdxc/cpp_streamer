@@ -89,9 +89,7 @@ void PackHandleH264::InputRtpPacket(std::shared_ptr<RtpPacketInfo> pkt_ptr) {
     } else if (nal_type == 28) {//rtp fua
         bool start = false;
         bool end   = false;
-
         GetStartEndBit(pkt_ptr->pkt, start, end);
-
         if (start && !end) {
             packets_queue_.clear();
             start_flag_ = start;

@@ -18,6 +18,7 @@ NackGenerator::~NackGenerator() {
 }
 
 void NackGenerator::UpdateRtt(int64_t rtt) {
+    LogInfof(logger_, "updateRTT:%ld", rtt);
     rtt_ = rtt;
 }
 
@@ -42,7 +43,7 @@ void NackGenerator::UpdateNackList(RtpPacket* pkt) {
         //the seq has been in the nack list, remove it.
         if (iter != nack_map_.end()) {
             nack_map_.erase(iter);
-            LogDebugf(logger_, "remove from nack map, ssrc:%u, seq:%d, last seq:%d, payloadtype:%d, rtt:%ld",
+            LogDebugf(logger_, "remove from nack map, ssrc:%u, seq:%d, last seq:%d, pt:%d, rtt:%ld",
                 pkt->GetSsrc(), seq, last_seq_, pkt->GetPayloadType(), rtt_);
             return;
         }
@@ -53,7 +54,7 @@ void NackGenerator::UpdateNackList(RtpPacket* pkt) {
             ss << " " << item.first;
         }
         ss << " ]";
-        LogInfof(logger_, "receive the old packet which is not in nack list, ssrc:%u, seq:%d, last seq:%d, payloadtype:%d, nack list:%s, rtt:%ld",
+        LogInfof(logger_, "receive the old packet which is not in nack list, ssrc:%u, seq:%d, last seq:%d, pt:%d, nack list:%s, rtt:%ld",
             pkt->GetSsrc(), seq, last_seq_, pkt->GetPayloadType(), ss.str().c_str(), rtt_);
         */
         return;
@@ -85,22 +86,19 @@ void NackGenerator::OnTimer() {
 
     int64_t now_ms = now_millisec();
     std::vector<uint16_t> lost_seq_list;
-    auto iter = nack_map_.begin();
 
+    auto iter = nack_map_.begin();
     while(iter != nack_map_.end()) {
         if (iter->second.retry > NACK_RETRY_MAX) {
             iter = nack_map_.erase(iter);
             continue;
         }
-        if (now_ms - iter->second.sent_ms < rtt_) {
-            iter++;
-            continue;
+
+        if (now_ms - iter->second.sent_ms >= rtt_) {
+            iter->second.sent_ms = now_ms;
+            iter->second.retry++;
+            lost_seq_list.push_back(iter->first);
         }
-        iter->second.sent_ms = now_ms;
-        iter->second.retry++;
-
-        lost_seq_list.push_back(iter->first);
-
         iter++;
     }
 
@@ -111,13 +109,12 @@ void NackGenerator::OnTimer() {
     }
 
     if (nack_map_.size() > NACK_LIST_MAX) {
-        LogWarnf(logger_, "the nack list is overflow(%lu) and the list threshold is %d",
-            nack_map_.size(), NACK_LIST_MAX);
+        LogWarnf(logger_, "nack list overflow: got %lu, max %d", nack_map_.size(), NACK_LIST_MAX);
+        while (nack_map_.size() > NACK_LIST_MAX) {
+            nack_map_.erase(nack_map_.begin());
+        }
     }
 
-    while (nack_map_.size() > NACK_LIST_MAX) {
-        nack_map_.erase(nack_map_.begin());
-    }
 }
 
 }

@@ -10,16 +10,9 @@
 namespace cpp_streamer
 {
 
-HttpClient::HttpClient(uv_loop_t* loop,
-                       const std::string& host,
-                       uint16_t port,
-                       HttpClientCallbackI* cb,
-                       Logger* logger,
-                       bool ssl_enable): host_(host)
-                                         , port_(port)
-                                         , cb_(cb)
-                                         , logger_(logger)
-{
+HttpClient::HttpClient(uv_loop_t* loop, const std::string& host, uint16_t port,
+                       HttpClientCallbackI* cb, Logger* logger, bool ssl_enable)
+    : host_(host), port_(port), cb_(cb), logger_(logger) {
     client_ = new TcpClient(loop, this, logger_, ssl_enable);
 }
 

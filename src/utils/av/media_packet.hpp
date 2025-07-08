@@ -15,35 +15,31 @@ namespace cpp_streamer
 class Media_Packet
 {
 public:
-    Media_Packet()
-    {
+    Media_Packet() {
         buffer_ptr_ = std::make_shared<DataBuffer>();
     }
-    Media_Packet(size_t len)
-    {
+    Media_Packet(size_t len) {
         buffer_ptr_ = std::make_shared<DataBuffer>(len);
     }
-    Media_Packet(const Media_Packet& input_packet)
-    {
+    Media_Packet(const Media_Packet& input_packet) {
         copy_properties(input_packet);
-        buffer_ptr_ = std::make_shared<DataBuffer>(input_packet.buffer_ptr_->DataLen() + 1024);
-        buffer_ptr_->AppendData(input_packet.buffer_ptr_->Data(), input_packet.buffer_ptr_->DataLen());
+        buffer_ptr_ = std::make_shared<DataBuffer>(input_packet.Size() + 1024);
+        buffer_ptr_->AppendData(input_packet.Data(), input_packet.Size());
     }
-    Media_Packet& operator=(const Media_Packet& input_packet)
-    {
+    Media_Packet& operator=(const Media_Packet& input_packet) {
         copy_properties(input_packet);
-        buffer_ptr_ = std::make_shared<DataBuffer>(input_packet.buffer_ptr_->DataLen() + 1024);
-        buffer_ptr_->AppendData(input_packet.buffer_ptr_->Data(), input_packet.buffer_ptr_->DataLen());
+        buffer_ptr_ = std::make_shared<DataBuffer>(input_packet.Size() + 1024);
+        buffer_ptr_->AppendData(input_packet.Data(), input_packet.Size());
         return *this;
     }
-    ~Media_Packet()
-    {
+
+    ~Media_Packet() {
     }
 
     std::shared_ptr<Media_Packet> copy() {
-        std::shared_ptr<Media_Packet> pkt_ptr = std::make_shared<Media_Packet>(this->buffer_ptr_->DataLen() + 1024);
+        std::shared_ptr<Media_Packet> pkt_ptr = std::make_shared<Media_Packet>(this->Size() + 1024);
         pkt_ptr->copy_properties(*this);
-        pkt_ptr->buffer_ptr_->AppendData(this->buffer_ptr_->Data(), this->buffer_ptr_->DataLen());
+        pkt_ptr->buffer_ptr_->AppendData(this->Data(), this->Size());
         return pkt_ptr;
     }
     void AppendData(const void* data, size_t len) {
@@ -51,10 +47,10 @@ public:
             buffer_ptr_->AppendData(data, len);
         }
     }
-    char* Data() {
+    const char* Data() const {
         return buffer_ptr_->Data();
     }
-    size_t Size() {
+    size_t Size() const {
         return buffer_ptr_->DataLen();
     }
 
@@ -94,15 +90,14 @@ public:
 
     std::string Dump(bool data_dump = false) {
         std::stringstream ss;
-        
         ss << "av type:" << avtype_tostring(av_type_);
 
         if (av_type_ != MEDIA_METADATA_TYPE) {
             ss << ", codec type:" << codectype_tostring(codec_type_);
         }
         ss << ", format type:" << formattype_tostring(fmt_type_) << ", dts:" << dts_ << ", pts:" << pts_
-           << ", is key frame:" << is_key_frame_ << ", is seq frame:" << is_seq_hdr_
-           << ", data length:" << buffer_ptr_->DataLen();
+           << (is_key_frame_?",keyframe ":"") << (is_seq_hdr_?", seqframe":"")
+           << ", dataLen:" << buffer_ptr_->DataLen();
         if (!key_.empty()) {
             ss << ", key:" << key_;
         }
@@ -149,8 +144,8 @@ public:
     int64_t pts_ = -1;
     bool is_key_frame_ = false;
     bool is_seq_hdr_   = false;
-    bool has_flv_audio_asc_ = false;
     std::shared_ptr<DataBuffer> buffer_ptr_;
+
     int metadata_type_;
     void setMetaData(const char* key, const char* value) {
         if (!key) return;
@@ -165,6 +160,7 @@ private:
     std::map<std::string, std::string> metadata_;
 
 public:
+    bool has_flv_audio_asc_ = false;
     int sample_rate_ = 44100;
     int sample_size_ = 1;
     uint8_t channel_ = 2;

@@ -11,13 +11,11 @@ class client : public HttpClientCallbackI
 public:
     client(uv_loop_t* loop, const std::string& schema,
             const std::string& host, uint16_t port,
-            Logger* logger = nullptr):schema_(schema)
-                                      , host_(host)
-                                      , port_(port)
-                                      , loop_(loop)
-                                      , logger_(logger)
-    {
+            Logger* logger = nullptr)
+        : schema_(schema), host_(host), port_(port), 
+        loop_(loop), logger_(logger) {
     }
+
     virtual ~client() {
         if (hc_) {
             delete hc_;
@@ -61,7 +59,6 @@ public:
             throw CppStreamException(err.c_str());
         }
 
-
         hc_->Post(subpath, headers, data);
     }
 
@@ -76,8 +73,8 @@ private:
             }
             return;
         }
-        std::string resp_data(resp_ptr->data_.Data(), resp_ptr->data_.DataLen());
 
+        std::string resp_data(resp_ptr->data_.Data(), resp_ptr->data_.DataLen());
         LogInfof(logger_, "http status:%d, status desc:%s, content len:%d",
                 resp_ptr->status_code_, resp_ptr->status_.c_str(), resp_ptr->content_length_);
         LogInfof(logger_, "http response:%s", resp_data.c_str());

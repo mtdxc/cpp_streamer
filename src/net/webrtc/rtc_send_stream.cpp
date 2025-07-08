@@ -29,33 +29,15 @@ RtcSendStream::RtcSendStream(MEDIA_PKT_TYPE type,
         item.retry_count = 0;
         item.pkt = nullptr;
     }
-    LogInfof(logger, "RtcSendStream construct type:%s, ssrc:%u, payload:%d, clock rate:%d, nack:%d, rtx 0",
+    LogInfof(logger, "RtcSendStream construct type:%s, ssrc:%u, payload:%d, clock rate:%d, nack:%d",
         avtype_tostring(type), ssrc, payload, clock_rate, nack);
 }
 
-RtcSendStream::RtcSendStream(MEDIA_PKT_TYPE type, 
-            uint32_t ssrc, uint8_t payload, int clock_rate,
-            bool nack, uint8_t rtx_payload, uint32_t rtx_ssrc,
-            RtcSendStreamCallbackI* cb, Logger* logger)
-    :logger_(logger), media_type_(type), cb_(cb) {
-    ssrc_        = ssrc;
-    pt_          = payload;
-    clock_rate_  = clock_rate;
-    nack_enable_ = nack;
-    has_rtx_     = true;
-    rtx_payload_ = rtx_payload;
-    rtx_ssrc_    = rtx_ssrc;
-
-    last_sr_ntp_ts_ = {0, 0};
-
-    send_buffer_.resize(SEND_BUFFER_SIZE);
-    for (auto& item : send_buffer_) {
-        item.last_ms = 0;
-        item.retry_count = 0;
-        item.pkt = nullptr;
-    }
-    LogInfof(logger, "RtcSendStream construct type:%s, ssrc:%u, payload:%d, clock rate:%d, nack:%d, rtx 1, rtx payload:%d, rtx ssrc:%u",
-        avtype_tostring(type), ssrc, payload, clock_rate, nack, rtx_payload, rtx_ssrc);
+void RtcSendStream::SetRtx(uint8_t pt, uint32_t ssrc) {
+    rtx_payload_ = pt;
+    rtx_ssrc_ = ssrc;
+    has_rtx_ = pt || ssrc;
+    LogInfof(logger_, "RtcSendStream ssrc:%u, setRtx pt:%d ssrc:%u", ssrc_, pt, ssrc);
 }
 
 RtcSendStream::~RtcSendStream()

@@ -591,7 +591,6 @@ void PeerConnection::OnRead(const char* data, size_t data_size, UdpTuple address
     }
 
     udp_client_->TryRead();
-    return;
 }
 
 void PeerConnection::HandleRtpData(uint8_t* data, size_t len) {
@@ -716,15 +715,11 @@ void PeerConnection::CreateVideoRecvStream() {
             ssrc, pt, video_nack ? " nack" : "",
             has_rtx_, rtx_ssrc, rtx_pt, clock_rate);
     if (ssrc > 0) {
+        video_recv_stream_ = std::make_shared<RtcRecvStream>(MEDIA_VIDEO_TYPE,
+            ssrc, pt, clock_rate, video_nack,
+            this, logger_, loop_);
         if (has_rtx_ && (rtx_pt > 0) && (rtx_ssrc > 0)) {
-            video_recv_stream_ = std::make_shared<RtcRecvStream>(MEDIA_VIDEO_TYPE, 
-                ssrc, pt, clock_rate, video_nack, rtx_pt, rtx_ssrc, 
-                this, logger_, loop_);
-           
-        } else {
-            video_recv_stream_ = std::make_shared<RtcRecvStream>(MEDIA_VIDEO_TYPE,
-                ssrc, pt, clock_rate, video_nack, 
-                this, logger_, loop_);
+            video_recv_stream_->SetRtx(rtx_pt, rtx_ssrc);  
         }
         video_recv_stream_->RequestKeyFrame(-1);
     }
@@ -760,23 +755,16 @@ void PeerConnection::CreateSendStream() {
         answer_sdp_.GetAudioSsrc(), answer_sdp_.GetVideoSsrc(),
         answer_sdp_.IsVideoRtxEnable(), answer_sdp_.GetVideoRtxSsrc(), answer_sdp_.GetVideoRtxPayloadType());
     if (answer_sdp_.GetVideoSsrc() > 0) {
+        video_send_stream_ = std::make_shared<RtcSendStream>(MEDIA_VIDEO_TYPE,
+            answer_sdp_.GetVideoSsrc(),
+            answer_sdp_.GetVideoPayloadType(),
+            answer_sdp_.GetVideoClockRate(),
+            video_nack, this, logger_);
         has_rtx_ = answer_sdp_.IsVideoRtxEnable();
         uint32_t rtx_ssrc    = answer_sdp_.GetVideoRtxSsrc();
         uint8_t rtx_payload  = answer_sdp_.GetVideoRtxPayloadType();
         if (has_rtx_ && (rtx_payload > 0) && (rtx_ssrc > 0)) {
-            video_send_stream_ = std::make_shared<RtcSendStream>(MEDIA_VIDEO_TYPE, 
-                answer_sdp_.GetVideoSsrc(),
-                answer_sdp_.GetVideoPayloadType(),
-                answer_sdp_.GetVideoClockRate(),
-                video_nack, rtx_payload, rtx_ssrc,
-                this, logger_);
-           
-        } else {
-            video_send_stream_ = std::make_shared<RtcSendStream>(MEDIA_VIDEO_TYPE,
-                answer_sdp_.GetVideoSsrc(),
-                answer_sdp_.GetVideoPayloadType(),
-                answer_sdp_.GetVideoClockRate(),
-                video_nack, this, logger_);
+            video_send_stream_->SetRtx(rtx_payload, rtx_ssrc);
         }
     }
 
@@ -799,22 +787,16 @@ void PeerConnection::CreateSendStream2() {
         answer_sdp_.IsVideoRtxEnable(), answer_sdp_.GetVideoRtxSsrc(), answer_sdp_.GetVideoRtxPayloadType());
 
     if (offer_sdp_.GetVideoSsrc() > 0) {
+        video_send_stream_ = std::make_shared<RtcSendStream>(MEDIA_VIDEO_TYPE,
+            offer_sdp_.GetVideoSsrc(),
+            offer_sdp_.GetVideoPayloadType(),
+            offer_sdp_.GetVideoClockRate(),
+            video_nack, this, logger_);
         has_rtx_ = offer_sdp_.IsVideoRtxEnable();
         uint32_t rtx_ssrc    = offer_sdp_.GetVideoRtxSsrc();
         uint8_t rtx_payload  = offer_sdp_.GetVideoRtxPayloadType();
         if (has_rtx_ && (rtx_payload > 0) && (rtx_ssrc > 0)) {
-            video_send_stream_ = std::make_shared<RtcSendStream>(MEDIA_VIDEO_TYPE,
-                    offer_sdp_.GetVideoSsrc(),
-                    offer_sdp_.GetVideoPayloadType(),
-                    offer_sdp_.GetVideoClockRate(),
-                    video_nack, rtx_payload, rtx_ssrc,
-                    this, logger_);
-        } else {
-             video_send_stream_ = std::make_shared<RtcSendStream>(MEDIA_VIDEO_TYPE,
-                    offer_sdp_.GetVideoSsrc(),
-                    offer_sdp_.GetVideoPayloadType(),
-                    offer_sdp_.GetVideoClockRate(),
-                    video_nack, this, logger_);
+            video_send_stream_->SetRtx(rtx_payload, rtx_ssrc);
         }
     }
 
