@@ -70,6 +70,7 @@ private:
 
 private:
     void SendH264Packet(Media_Packet_Ptr pkt_ptr);
+    void SendH265Packet(Media_Packet_Ptr pkt_ptr);
 
 private:
     void SendVideoRtpPacket(RtpPacket* pkt, bool resend = false);

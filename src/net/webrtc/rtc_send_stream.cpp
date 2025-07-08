@@ -70,8 +70,16 @@ void RtcSendStream::SendPacket(Media_Packet_Ptr pkt_ptr) {
 }
 
 void RtcSendStream::SendVideoPacket(Media_Packet_Ptr pkt_ptr) {
-    if (pkt_ptr->codec_type_ == MEDIA_CODEC_H264) {
+    switch (pkt_ptr->codec_type_)
+    {
+    case MEDIA_CODEC_H264:
         SendH264Packet(pkt_ptr);
+        break;
+    case MEDIA_CODEC_H265:
+        SendH265Packet(pkt_ptr);
+        break;
+    default:
+        break;
     }
 }
 
@@ -91,6 +99,109 @@ void RtcSendStream::SendAudioPacket(Media_Packet_Ptr pkt_ptr) {
 
     SendAudioRtpPacket(pkt);
     delete pkt;
+}
+
+void RtcSendStream::SendH265Packet(Media_Packet_Ptr pkt_ptr) {
+    uint8_t* data = (uint8_t*)pkt_ptr->buffer_ptr_->Data();
+    size_t len = pkt_ptr->buffer_ptr_->DataLen();
+    int64_t ts = pkt_ptr->dts_;
+    ts = ts * clock_rate_ / 1000;
+    int pos = GetNaluTypePos(data);
+    uint8_t nalType = GET_HEVC_NALU_TYPE(data[pos]);
+    if (nalType == NAL_UNIT_SEI || nalType == NAL_UNIT_SEI_SUFFIX) {
+        LogInfof(logger_, "skip h265 sei packet len:%lu, clock rate:%d, pos:%d",
+            len, clock_rate_, pos);
+        return;
+    }
+    if (nalType == NAL_UNIT_CODED_SLICE_IDR) {
+        LogDebugf(logger_, "send h265 keyframe len:%lu, pos:%d", len, pos);
+    }
+
+    pkt_ptr->buffer_ptr_->ConsumeData(pos);
+    data = (uint8_t*)pkt_ptr->buffer_ptr_->Data();
+    len = pkt_ptr->buffer_ptr_->DataLen();
+    //LogInfof(logger_, "h265 data:0x%02x", data[0], data[1], data[2], data[3], data[4]);
+    if (pkt_ptr->is_seq_hdr_) {
+        if (len >= sizeof(sps_)) {
+            LogErrorf(logger_, "nalu sps/pps len:%lu error", len);
+            return;
+        }
+        if (nalType == NAL_UNIT_SPS) {
+            sps_len_ = len;
+            memcpy(sps_, data, sps_len_);
+        }
+        if (nalType == NAL_UNIT_PPS) {
+            pps_len_ = len;
+            memcpy(pps_, data, pps_len_);
+        }
+        if (nalType == NAL_UNIT_VPS) {
+            vps_len_ = len;
+            memcpy(vps_, data, vps_len_);
+        }
+        return;
+    }
+    if (pkt_ptr->is_key_frame_) {
+        if (sps_len_ > 0) {
+            RtpPacket* pkt = GenerateSinglePackets(sps_, sps_len_);
+
+            pkt->SetPayloadType(pt_);
+            pkt->SetSsrc(ssrc_);
+            pkt->SetSeq(seq_++);
+            pkt->SetTimestamp((uint32_t)ts);
+
+            SendVideoRtpPacket(pkt);
+            delete pkt;
+        }
+        if (pps_len_ > 0) {
+            RtpPacket* pkt = GenerateSinglePackets(pps_, pps_len_);
+
+            pkt->SetPayloadType(pt_);
+            pkt->SetSsrc(ssrc_);
+            pkt->SetSeq(seq_++);
+            pkt->SetTimestamp((uint32_t)ts);
+
+            SendVideoRtpPacket(pkt);
+            delete pkt;
+        }
+        if (vps_len_ > 0) {
+            RtpPacket* pkt = GenerateSinglePackets(vps_, vps_len_);
+
+            pkt->SetPayloadType(pt_);
+            pkt->SetSsrc(ssrc_);
+            pkt->SetSeq(seq_++);
+            pkt->SetTimestamp((uint32_t)ts);
+
+            SendVideoRtpPacket(pkt);
+            delete pkt;
+        }
+    }
+
+    //single packet
+    if (len <= kPayloadMaxSize) {
+        RtpPacket* pkt = GenerateSinglePackets(data, len);
+
+        pkt->SetPayloadType(pt_);
+        pkt->SetSsrc(ssrc_);
+        pkt->SetSeq(seq_++);
+        pkt->SetTimestamp((uint32_t)ts);
+        pkt->SetMarker(1);
+
+        SendVideoRtpPacket(pkt);
+        delete pkt;
+        return;
+    }
+
+    //fuA packet
+    std::vector<RtpPacket*> fuA_vec = GenerateFuAPackets265(data, len);
+    for (auto fuA_pkt : fuA_vec) {
+        fuA_pkt->SetPayloadType(pt_);
+        fuA_pkt->SetSsrc(ssrc_);
+        fuA_pkt->SetSeq(seq_++);
+        fuA_pkt->SetTimestamp((uint32_t)ts);
+
+        SendVideoRtpPacket(fuA_pkt);
+        delete fuA_pkt;
+    }
 }
 
 void RtcSendStream::SendH264Packet(Media_Packet_Ptr pkt_ptr) {

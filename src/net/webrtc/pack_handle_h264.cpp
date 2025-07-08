@@ -1,13 +1,16 @@
 #include "pack_handle_h264.hpp"
+#include "av.hpp"
+#include "h264_h265_header.hpp"
 #include "utils/av/media_packet.hpp"
 #include "logger.hpp"
 #include "byte_stream.hpp"
 #include "timeex.hpp"
+#include <cstdint>
 
 namespace cpp_streamer
 {
 static const uint8_t NAL_START_CODE[4] = {0, 0, 0, 1};
-static const size_t H264_STAPA_FIELD_SIZE = 2;
+static const size_t STAPA_FIELD_SIZE = 2;
 
 PackHandleH264::PackHandleH264(PackCallbackI* cb, uv_loop_t* loop, Logger* logger)
     :TimerInterface(loop, 100), cb_(cb), logger_(logger) {
@@ -20,7 +23,7 @@ PackHandleH264::~PackHandleH264() {
 
 void PackHandleH264::GetStartEndBit(RtpPacket* pkt, bool& start, bool& end) {
     uint8_t* payload_data = pkt->GetPayload();
-    uint8_t fu_header = payload_data[1];
+    uint8_t fu_header = payload_data[1 + is_h265_];
 
     start = false;
     end   = false;
@@ -56,37 +59,20 @@ void PackHandleH264::InputRtpPacket(std::shared_ptr<RtpPacketInfo> pkt_ptr) {
     }
 
     uint8_t* payload_data = pkt_ptr->pkt->GetPayload();
-    uint8_t nal_type = payload_data[0] & 0x1f;
+    uint8_t nal_type = is_h265_ ? payload_data[0] >> 1 & 0x3f : payload_data[0] & 0x1f;
 
-    if ((nal_type >= 1) && (nal_type <= 23)) {//single nalu
+    if (nal_type <= max_nal_type_) {//single nalu
         int64_t dts = pkt_ptr->pkt->GetTimestamp();
         size_t pkt_size = sizeof(NAL_START_CODE) + pkt_ptr->pkt->GetPayloadLength() + 1024;
 
-        auto h264_pkt_ptr = std::make_shared<Media_Packet>(pkt_size);
-
-        h264_pkt_ptr->buffer_ptr_->AppendData((char*)NAL_START_CODE, sizeof(NAL_START_CODE));
-        h264_pkt_ptr->buffer_ptr_->AppendData((char*)payload_data, pkt_ptr->pkt->GetPayloadLength());
-
-        h264_pkt_ptr->av_type_    = MEDIA_VIDEO_TYPE;
-        h264_pkt_ptr->codec_type_ = MEDIA_CODEC_H264;
-        h264_pkt_ptr->fmt_type_   = MEDIA_FORMAT_RAW;
-        h264_pkt_ptr->dts_        = dts;
-        h264_pkt_ptr->pts_        = dts;
-
-        if ((nal_type == kAvcNaluTypeSPS) || (nal_type == kAvcNaluTypePPS)) {
-            h264_pkt_ptr->is_seq_hdr_   = true;
-            h264_pkt_ptr->is_key_frame_ = false;
-        } else if (nal_type == kAvcNaluTypeIDR) {
-            h264_pkt_ptr->is_seq_hdr_   = false;
-            h264_pkt_ptr->is_key_frame_ = true;
-        } else {
-            h264_pkt_ptr->is_seq_hdr_   = false;
-            h264_pkt_ptr->is_key_frame_ = false;
-        }
-
-        cb_->MediaPacketOutput(h264_pkt_ptr);
+        auto pkt = std::make_shared<Media_Packet>(pkt_size);
+        pkt->buffer_ptr_->AppendData((char*)NAL_START_CODE, sizeof(NAL_START_CODE));
+        pkt->buffer_ptr_->AppendData((char*)payload_data, pkt_ptr->pkt->GetPayloadLength());
+        pkt->dts_        = dts;
+        pkt->pts_        = dts;
+        OutputPacket(pkt);
         return;
-    } else if (nal_type == 28) {//rtp fua
+    } else if (nal_type == fu_nal_type_) {//rtp fua
         bool start = false;
         bool end   = false;
         GetStartEndBit(pkt_ptr->pkt, start, end);
@@ -114,28 +100,13 @@ void PackHandleH264::InputRtpPacket(std::shared_ptr<RtpPacketInfo> pkt_ptr) {
         packets_queue_.push_back(pkt_ptr);
 
         if (start_flag_ && end_flag_) {
-            auto h264_pkt_ptr = std::make_shared<Media_Packet>(50*1024);
+            auto pkt = std::make_shared<Media_Packet>(50*1024);
             int64_t dts = 0;
-            bool ok = DemuxFua(h264_pkt_ptr, dts);
+            bool ok = DemuxFua(pkt, dts);
             if (ok) {
-                h264_pkt_ptr->av_type_    = MEDIA_VIDEO_TYPE;
-                h264_pkt_ptr->codec_type_ = MEDIA_CODEC_H264;
-                h264_pkt_ptr->fmt_type_   = MEDIA_FORMAT_RAW;
-                h264_pkt_ptr->dts_        = dts;
-                h264_pkt_ptr->pts_        = dts;
-                nal_type = ((uint8_t*)h264_pkt_ptr->buffer_ptr_->Data())[4];
-                nal_type = nal_type & 0x1f;
-                if ((nal_type == kAvcNaluTypeSPS) || (nal_type == kAvcNaluTypePPS)) {
-                    h264_pkt_ptr->is_seq_hdr_   = true;
-                    h264_pkt_ptr->is_key_frame_ = false;
-                } else if (nal_type == kAvcNaluTypeIDR) {
-                    h264_pkt_ptr->is_seq_hdr_   = false;
-                    h264_pkt_ptr->is_key_frame_ = true;
-                } else {
-                    h264_pkt_ptr->is_seq_hdr_   = false;
-                    h264_pkt_ptr->is_key_frame_ = false;
-                }
-                cb_->MediaPacketOutput(h264_pkt_ptr);
+                pkt->dts_        = dts;
+                pkt->pts_        = dts;
+                OutputPacket(pkt);
             } else {
                 ReportLost(pkt_ptr);
             }
@@ -146,7 +117,7 @@ void PackHandleH264::InputRtpPacket(std::shared_ptr<RtpPacketInfo> pkt_ptr) {
 
         CheckFuaTimeout();
         return;
-    } else if (nal_type == 24) {//handle stapA
+    } else if (nal_type == stap_nal_type_) {//handle stapA
         bool ret = DemuxStapA(pkt_ptr);
         if (!ret) {
             ReportLost(pkt_ptr);
@@ -183,59 +154,41 @@ void PackHandleH264::CheckFuaTimeout() {
 bool PackHandleH264::DemuxStapA(std::shared_ptr<RtpPacketInfo> pkt_ptr) {
     uint8_t* payload_data = pkt_ptr->pkt->GetPayload();
     size_t payload_length = pkt_ptr->pkt->GetPayloadLength();
-    std::vector<size_t> offsets;
-
-    if (payload_length <= (sizeof(uint8_t) + H264_STAPA_FIELD_SIZE)) {
+    if (payload_length <= 1 + is_h265_ + STAPA_FIELD_SIZE) {
         LogErrorf(logger_, "demux stapA error: payload length(%lu) is too short", payload_length);
         return false;
     }
 
+    std::vector<size_t> offsets;
     bool ret = ParseStapAOffsets(payload_data, payload_length, offsets);
     if (!ret) {
         return ret;
     }
     int64_t dts = (int64_t)pkt_ptr->pkt->GetTimestamp();
 
-    offsets.push_back(payload_length + H264_STAPA_FIELD_SIZE);//end offset.
+    offsets.push_back(payload_length + STAPA_FIELD_SIZE);//end offset.
     for (size_t index = 0; index < (offsets.size() - 1); index++) {
         size_t start_offset = offsets[index];
-        size_t end_offset = offsets[index + 1] - H264_STAPA_FIELD_SIZE;
-        if ((end_offset - start_offset) < sizeof(uint8_t)) {
+        size_t end_offset = offsets[index + 1] - STAPA_FIELD_SIZE;
+        if ((end_offset - start_offset) < 1 + is_h265_) {
             LogErrorf(logger_, "demux stapA error: start offset:%lu, end offset:%lu",
                 start_offset,  end_offset);
             return false;
         }
         size_t pkt_size = sizeof(NAL_START_CODE) + end_offset - start_offset + 1024;
-        auto h264_pkt_ptr = std::make_shared<Media_Packet>(pkt_size);
-
-        h264_pkt_ptr->buffer_ptr_->AppendData((char*)NAL_START_CODE, sizeof(NAL_START_CODE));
-        h264_pkt_ptr->buffer_ptr_->AppendData((char*)payload_data + start_offset, end_offset - start_offset);
-        h264_pkt_ptr->av_type_    = MEDIA_VIDEO_TYPE;
-        h264_pkt_ptr->codec_type_ = MEDIA_CODEC_H264;
-        h264_pkt_ptr->fmt_type_   = MEDIA_FORMAT_RAW;
-        h264_pkt_ptr->dts_        = dts;
-        h264_pkt_ptr->pts_        = dts;
-
-        uint8_t nal_type = *(payload_data + start_offset) & 0x1f;
-
-        if ((nal_type == kAvcNaluTypeSPS) || (nal_type == kAvcNaluTypePPS)) {
-            h264_pkt_ptr->is_seq_hdr_   = true;
-            h264_pkt_ptr->is_key_frame_ = false;
-        } else if (nal_type == kAvcNaluTypeIDR) {
-            h264_pkt_ptr->is_seq_hdr_   = false;
-            h264_pkt_ptr->is_key_frame_ = true;
-        } else {
-            h264_pkt_ptr->is_seq_hdr_   = false;
-            h264_pkt_ptr->is_key_frame_ = false;
-        }
-        cb_->MediaPacketOutput(h264_pkt_ptr);
+        auto pkt = std::make_shared<Media_Packet>(pkt_size);
+        pkt->buffer_ptr_->AppendData((char*)NAL_START_CODE, sizeof(NAL_START_CODE));
+        pkt->buffer_ptr_->AppendData((char*)payload_data + start_offset, end_offset - start_offset);
+        pkt->dts_ = dts;
+        pkt->pts_ = dts;
+        OutputPacket(pkt);
     }
     return true;
 }
 
 bool PackHandleH264::ParseStapAOffsets(const uint8_t* data, size_t data_len, std::vector<size_t> &offsets) {
     
-    size_t offset = 1;
+    size_t offset = is_h265_ + 1;
     size_t left_len = data_len;
     const uint8_t* p = data + offset;
     left_len -= offset;
@@ -255,8 +208,8 @@ bool PackHandleH264::ParseStapAOffsets(const uint8_t* data, size_t data_len, std
         }
         p += nalu_len;
         left_len -= nalu_len;
-        offsets.push_back(offset + H264_STAPA_FIELD_SIZE);
-        offset += H264_STAPA_FIELD_SIZE + nalu_len;
+        offsets.push_back(offset + STAPA_FIELD_SIZE);
+        offset += STAPA_FIELD_SIZE + nalu_len;
     }
     
     return true;
@@ -283,16 +236,24 @@ bool PackHandleH264::DemuxFua(Media_Packet_Ptr h264_pkt_ptr, int64_t& timestamp)
         if (index == 0) {
             if (start) {
                 has_start = true;
-                uint8_t fu_indicator = payload[0];
-                uint8_t fu_header    = payload[1];
-                uint8_t nalu_header  = (fu_indicator & 0xe0) | (fu_header & 0x1f);
                 buffer_ptr->AppendData((char*)NAL_START_CODE, sizeof(NAL_START_CODE));
-                buffer_ptr->AppendData((char*)&nalu_header, sizeof(nalu_header));
-                buffer_ptr->AppendData((char*)payload + 2, payload_len - 2);
+                if (is_h265_) {
+                    uint8_t nalu_header[2];
+                    uint8_t type = payload[2] & 0x3f;
+                    nalu_header[0] = (type << 1) | (payload[0] & 0x81);
+                    nalu_header[1] = payload[1];
+                    buffer_ptr->AppendData((char*)&nalu_header, sizeof(nalu_header));
+                } else {
+                    uint8_t fu_indicator = payload[0];
+                    uint8_t fu_header    = payload[1];
+                    uint8_t nalu_header  = (fu_indicator & 0xe0) | (fu_header & 0x1f);
+                    buffer_ptr->AppendData((char*)&nalu_header, sizeof(nalu_header));
+                }
+                buffer_ptr->AppendData((char*)payload + 2 + is_h265_, payload_len - 2 - is_h265_);
             }
         } else {
             if (has_start) {
-                buffer_ptr->AppendData((char*)payload + 2, payload_len - 2);
+                buffer_ptr->AppendData((char*)payload + 2 + is_h265_, payload_len - 2 - is_h265_);
             }
         }
         if (end) {
@@ -311,6 +272,38 @@ void PackHandleH264::ResetRtpFua() {
     start_flag_ = false;
     end_flag_   = false;
     packets_queue_.clear();
+}
+
+void PackHandleH264::OutputPacket(Media_Packet_Ptr pkt) {
+    if (!cb_ || !pkt) return;
+    pkt->av_type_ = MEDIA_VIDEO_TYPE;
+    pkt->fmt_type_ = MEDIA_FORMAT_RAW;
+    pkt->is_seq_hdr_ = false;
+    pkt->is_key_frame_ = false;
+    uint8_t nal_type = ((uint8_t*)pkt->buffer_ptr_->Data())[4];
+    if (is_h265_) {
+        pkt->codec_type_ = MEDIA_CODEC_H265;
+        nal_type = nal_type >> 1 & 0x3f; // H265 NALU type is in the first 6 bits
+        if(nal_type == NAL_UNIT_SPS || nal_type == NAL_UNIT_PPS || nal_type == NAL_UNIT_VPS) {
+            pkt->is_seq_hdr_ = true;
+            pkt->is_key_frame_ = false;
+        } else if (nal_type == NAL_UNIT_CODED_SLICE_IDR || nal_type == NAL_UNIT_CODED_SLICE_IDR_N_LP) {
+            pkt->is_seq_hdr_ = false;
+            pkt->is_key_frame_ = true;
+        }
+    } else {
+        pkt->codec_type_ = MEDIA_CODEC_H264;
+        nal_type = nal_type & 0x1f; // H264 NALU type is in the last 5 bits
+        if ((nal_type == kAvcNaluTypeSPS) || (nal_type == kAvcNaluTypePPS)) {
+            pkt->is_seq_hdr_ = true;
+            pkt->is_key_frame_ = false;
+        }
+        else if (nal_type == kAvcNaluTypeIDR) {
+            pkt->is_seq_hdr_ = false;
+            pkt->is_key_frame_ = true;
+        }
+    }
+    cb_->MediaPacketOutput(pkt);
 }
 
 }

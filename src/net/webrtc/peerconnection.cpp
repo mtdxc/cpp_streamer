@@ -1522,7 +1522,12 @@ void PeerConnection::RtpPacketReset(std::shared_ptr<RtpPacketInfo> pkt_ptr) {
 void PeerConnection::RtpPacketOutput(std::shared_ptr<RtpPacketInfo> pkt_ptr) {
     if (pkt_ptr->media_type_ == MEDIA_VIDEO_TYPE) {
         if (!video_pack_) {
-            video_pack_.reset(new PackHandleH264(this, loop_, logger_));
+            std::string codec = GetVideoCodecType(SDP_ANSWER);
+            auto pack = new PackHandleH264(this, loop_, logger_);
+            if (codec == "H265") {
+                pack->setH265(true);
+            }
+            video_pack_.reset(pack);
         }
         video_pack_->InputRtpPacket(pkt_ptr);
     } else if (pkt_ptr->media_type_ == MEDIA_AUDIO_TYPE) {

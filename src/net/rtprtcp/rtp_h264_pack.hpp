@@ -44,6 +44,7 @@ static const size_t kNaluTypeSize = 1;
 
 RtpPacket* GenerateStapAPackets(std::vector<std::pair<unsigned char*, int>> NalUVec, HeaderExtension* ext = nullptr);
 
+std::vector<RtpPacket*> GenerateFuAPackets265(uint8_t* data, size_t len, HeaderExtension* ext = nullptr);
 std::vector<RtpPacket*> GenerateFuAPackets(uint8_t* data, size_t len, HeaderExtension* ext = nullptr);
 
 std::vector<int> SplitNalu(int payload_len);

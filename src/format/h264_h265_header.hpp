@@ -87,9 +87,9 @@ enum HEVC_NALU_TYPE
     NAL_UNIT_RESERVED_45,
     NAL_UNIT_RESERVED_46,
     NAL_UNIT_RESERVED_47,
-    NAL_UNIT_UNSPECIFIED_48,
-    NAL_UNIT_UNSPECIFIED_49,
-    NAL_UNIT_UNSPECIFIED_50,
+    NAL_UNIT_AP_A,   // 48 聚合相同时间戳的 NAL 单元
+    NAL_UNIT_FU, // 49
+    NAL_UNIT_AP_B, // 50 聚合不同时间戳的 NAL 单元
     NAL_UNIT_UNSPECIFIED_51,
     NAL_UNIT_UNSPECIFIED_52,
     NAL_UNIT_UNSPECIFIED_53,
@@ -110,6 +110,19 @@ enum HEVC_NALU_TYPE
 
 #define GET_HEVC_NALU_TYPE(code) (HEVC_NALU_TYPE)((code & 0x7E)>>1)
 
+#define H265_TYPE(v) (((uint8_t)(v) >> 1) & 0x3f)
+#define H264_TYPE(code) ((code) & 0x1f)
+/*
+ 0               1
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |F|    Type   |  LayerId  | TID |
+ +-------------+-----------------+
+ Forbidden zero(F) : 1 bit
+ NAL unit type(Type) : 6 bits
+ NUH layer ID(LayerId) : 6 bits
+ NUH temporal ID plus 1 (TID) : 3 bits
+*/
 typedef struct Hevc_Header_S {
     uint8_t forbid;
     uint8_t nalu_type;

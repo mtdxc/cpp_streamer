@@ -13,7 +13,12 @@ class PackHandleH264 : public PackHandleBase, public TimerInterface
 public:
     PackHandleH264(PackCallbackI* cb, uv_loop_t* io_ctx, Logger* logger);
     virtual ~PackHandleH264();
-
+    void setH265(bool val) {
+        is_h265_ = val; 
+        max_nal_type_ = val ? 47 : 23;
+        fu_nal_type_ = val ? 49 : 28;
+        stap_nal_type_ = val ? 48 : 24;
+    }
 public:
     virtual void InputRtpPacket(std::shared_ptr<RtpPacketInfo> pkt_ptr) override;
 
@@ -28,7 +33,7 @@ private:
     bool ParseStapAOffsets(const uint8_t* data, size_t data_len, std::vector<size_t> &offsets);
     void CheckFuaTimeout();
     void ReportLost(std::shared_ptr<RtpPacketInfo> pkt_ptr);
-    
+    void OutputPacket(Media_Packet_Ptr pkt);
 private:
     bool init_flag_  = false;
     bool start_flag_ = false;
@@ -37,7 +42,11 @@ private:
     std::deque<std::shared_ptr<RtpPacketInfo>> packets_queue_;
     PackCallbackI* cb_ = nullptr;
     int64_t report_lost_ts_ = -1;
-
+    uint8_t max_nal_type_ = 23;
+    uint8_t fu_nal_type_ = 28;
+    uint8_t stap_nal_type_ = 24;
+    // For H264, we consider NALU types 1-23 as single N
+    bool is_h265_ = false;
 private:
     Logger* logger_ = nullptr;
 };

@@ -37,6 +37,45 @@ RtpPacket* GenerateStapAPackets(std::vector<std::pair<unsigned char*, int>> Nalu
     return packet;
 }
 
+#define kH265NalHeaderSize 2
+// HEVC FU-A fragmentation according to RFC 7798
+std::vector<RtpPacket*> GenerateFuAPackets265(uint8_t* nalu, size_t nalu_size, HeaderExtension* ext) {
+    std::vector<RtpPacket*> packets;
+    if (nalu_size < kH265NalHeaderSize) return packets;
+
+    size_t payload_left = nalu_size - kH265NalHeaderSize;
+    std::vector<int> fragment_sizes = SplitNalu(payload_left);
+
+    uint8_t nalu_header0 = nalu[0];
+    uint8_t nalu_header1 = nalu[1];
+    uint8_t nalu_type = (nalu_header0 >> 1) & 0x3F; // 6 bits
+
+    auto fragment = nalu + kH265NalHeaderSize;
+
+    for (size_t i = 0; i < fragment_sizes.size(); ++i) {
+        size_t payload_len = 3 + fragment_sizes[i]; // 2 bytes FU indicator/header + 1 byte FU header + fragment
+        RtpPacket* packet = MakeRtpPacket(ext, payload_len);
+        uint8_t* payload = packet->GetPayload();
+
+        // FU indicator: F(1) | Type(6) | LayerId(6) | TID(3)
+        payload[0] = 49 << 1; // F bit and type 49 (FU)
+        payload[1] = nalu_header1; // LayerId and TID from original NALU
+
+        // FU header: S(1) | E(1) | R(1) | Type(6)
+        payload[2] = 0;
+        if (i == 0) payload[2] |= 0x80; // Start bit
+        if (i == fragment_sizes.size() - 1) payload[2] |= 0x40; // End bit
+        payload[2] |= nalu_type;
+
+        memcpy(payload + 3, fragment, fragment_sizes[i]);
+        fragment += fragment_sizes[i];
+
+        packet->SetPayloadLength(3 + fragment_sizes[i]);
+        packet->SetMarker(i == (fragment_sizes.size() - 1));
+        packets.push_back(packet);
+    }
+    return packets;
+}
 
 std::vector<RtpPacket*> GenerateFuAPackets(uint8_t* nalu, size_t nalu_size, HeaderExtension* ext) {
     std::vector<RtpPacket*> packets;
