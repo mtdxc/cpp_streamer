@@ -21,8 +21,7 @@ public:
         this->pkt = input_pkt->Clone();
     }
 
-    ~RtpPacketInfo()
-    {
+    ~RtpPacketInfo() {
         delete this->pkt;
         this->pkt = nullptr;
     }

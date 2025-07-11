@@ -1,12 +1,8 @@
 #ifndef RTCP_XR_DLRR_HPP
 #define RTCP_XR_DLRR_HPP
-#include <stdint.h>
-#include <stddef.h>
-#include <string>
-#include <string.h>
+
 #include <vector>
 #include "rtprtcp_pub.hpp"
-#include "rtcp_xr.hpp"
 
 namespace cpp_streamer
 {

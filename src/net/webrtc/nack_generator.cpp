@@ -72,8 +72,7 @@ void NackGenerator::UpdateNackList(RtpPacket* pkt) {
 
     //add seqs in nack list
     for (uint16_t key_seq = seq_start + 1; key_seq < seq_end; key_seq++) {
-        auto iter = nack_map_.find(key_seq);
-        if (iter == nack_map_.end()) {
+        if (0 == nack_map_.count(key_seq)) {
             nack_map_.insert(std::make_pair(key_seq, NACK_INFO(key_seq, 0, 0)));
         }
     }

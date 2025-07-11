@@ -1,11 +1,7 @@
 #ifndef RTCP_FEEDBACK_NACK_HPP
 #define RTCP_FEEDBACK_NACK_HPP
-#include "rtcp_fb_pub.hpp"
-#include <stdint.h>
-#include <stddef.h>
-#include <string>
-#include <cstring>
-#include <sstream>
+
+#include "rtprtcp_pub.hpp"
 #include <stdio.h>
 #include <vector>
 
@@ -34,8 +30,7 @@ typedef struct
 class RtcpFbNack
 {
 public:
-    RtcpFbNack(uint32_t sender_ssrc, uint32_t media_ssrc)
-    {
+    RtcpFbNack(uint32_t sender_ssrc, uint32_t media_ssrc) {
         fb_common_header_ = (RtcpFbCommonHeader*)(this->data);
         nack_header_ = (RtcpFbHeader*)(fb_common_header_ + 1);
         this->data_len = sizeof(RtcpFbCommonHeader) + sizeof(RtcpFbHeader);
@@ -50,9 +45,7 @@ public:
         nack_header_->media_ssrc  = (uint32_t)htonl(media_ssrc);
     }
 
-    ~RtcpFbNack()
-    {
-
+    ~RtcpFbNack() {
     }
 
 public:

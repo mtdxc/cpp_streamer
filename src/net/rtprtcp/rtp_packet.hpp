@@ -2,8 +2,6 @@
 #define RTP_PACKET_HPP
 
 #include "rtprtcp_pub.hpp"
-#include <stdint.h>
-#include <stddef.h>
 #include <string>
 #include <map>
 
@@ -21,8 +19,13 @@ typedef struct HeaderExtensionS
 } HeaderExtension;
 
 typedef struct OnebyteExtensionS {
+#if __BYTE_ORDER == __BIG_ENDIAN
+    uint8_t id  : 4;
+    uint8_t len : 4;
+#else
     uint8_t len : 4;
     uint8_t id  : 4;
+#endif
     uint8_t value[1];
 } OnebyteExtension;
 
@@ -64,47 +67,47 @@ public:
     ~RtpPacket();
 
 public:
-    uint8_t Version() {return header_->version;}
+    uint8_t Version() const {return header_->version;}
 
-    bool HasPadding() {return (header_->padding == 1) ? true : false;}
+    bool HasPadding() const {return (header_->padding == 1) ? true : false;}
     void SetPadding(bool flag) {header_->padding = flag ? 1 : 0;}
 
-    bool HasExtension() {return (header_->extension == 1) ? true : false;}
-    uint8_t CsrcCount() {return header_->csrc_count;}
+    bool HasExtension() const {return (header_->extension == 1) ? true : false;}
+    uint8_t CsrcCount() const {return header_->csrc_count;}
 
-    uint8_t GetPayloadType() {return header_->payload_type;}
+    uint8_t GetPayloadType() const {return header_->payload_type;}
     void SetPayloadType(uint8_t type) {header_->payload_type = type;}
-    uint8_t GetMPayloadType() {
+    uint8_t GetMPayloadType() const {
         uint8_t marker = header_->marker;
         return (marker << 7) | header_->payload_type;
     }
-    uint8_t GetMarker() {return header_->marker;}
+    uint8_t GetMarker() const {return header_->marker;}
     void SetMarker(uint8_t marker) { header_->marker = marker; }
 
-    uint16_t GetSeq() {return ntohs(header_->sequence);}
+    uint16_t GetSeq() const {return ntohs(header_->sequence);}
     void SetSeq(uint16_t seq) {header_->sequence = htons(seq);}
 
-    uint32_t GetTimestamp() {return ntohl(header_->timestamp);}
+    uint32_t GetTimestamp() const {return ntohl(header_->timestamp);}
     void SetTimestamp(uint32_t ts) { header_->timestamp = (uint32_t)htonl(ts); }
 
-    uint32_t GetSsrc() {return ntohl(header_->ssrc);}
+    uint32_t GetSsrc() const {return ntohl(header_->ssrc);}
     void SetSsrc(uint32_t ssrc) {header_->ssrc = (uint32_t)htonl(ssrc);}
 
     uint8_t* GetData() {return (uint8_t*)header_;}
-    size_t GetDataLength() {return data_len_;}
+    size_t GetDataLength() const {return data_len_;}
 
     uint8_t* GetPayload() {return payload_;}
-    size_t GetPayloadLength() {return payload_len_;}
+    size_t GetPayloadLength() const {return payload_len_;}
     void SetPayloadLength(size_t len) { payload_len_ = len; }
 
     void SetMidExtensionId(uint8_t id) { mid_extension_id_ = id; }
-    uint8_t GetMidExtensionId() { return mid_extension_id_; }
+    uint8_t GetMidExtensionId() const { return mid_extension_id_; }
 
     void SetAbsTimeExtensionId(uint8_t id) { abs_time_extension_id_ = id; }
-    uint8_t GetAbsTimeExtensionId() { return abs_time_extension_id_; }
+    uint8_t GetAbsTimeExtensionId() const { return abs_time_extension_id_; }
 
     void SetTransportWideCcExtensionId(uint8_t id) { transport_wideCc_extension_id_ = id; }
-    uint8_t GetTransportWideCcExtensionId() { return transport_wideCc_extension_id_; }
+    uint8_t GetTransportWideCcExtensionId() const { return transport_wideCc_extension_id_; }
 
     bool UpdateMid(uint8_t mid);
     bool ReadMid(uint8_t& mid);
@@ -116,13 +119,12 @@ public:
     bool UpdateTransportWideSeq(uint16_t seq);
 
     void SetNeedDelete(bool flag) { need_delete_ = flag; }
-    bool GetNeedDelete() { return need_delete_; }
+    bool GetNeedDelete() const { return need_delete_; }
 
-    void EnableDebug() { debug_enable_ = true; }
-    void DisableDebug() { debug_enable_ = false; }
-    bool IsDebug() { return debug_enable_; }
+    void SetDebug(bool val) { debug_enable_ = val; }
+    bool IsDebug() const { return debug_enable_; }
     
-    int64_t GetLocalMs() {return local_ms_;}
+    int64_t GetLocalMs() const {return local_ms_;}
 
     void RtxDecode(uint8_t pt, uint32_t ssrc);
     void RtxEncode(uint8_t pt, uint32_t ssrc, uint16_t seq);
@@ -172,6 +174,9 @@ private:
 private:
     Logger* logger_ = nullptr;
 };
+
+RtpPacket* GenerateSinglePackets(uint8_t* data, size_t len, HeaderExtension* ext = nullptr);
+RtpPacket* MakeRtpPacket(HeaderExtension* ext, size_t payload_len);
 
 }
 

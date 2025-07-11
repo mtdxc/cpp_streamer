@@ -1,5 +1,6 @@
 #ifndef HTTP_CLIENT_HPP
 #define HTTP_CLIENT_HPP
+
 #include "http_common.hpp"
 #include "tcp_client.hpp"
 #include "tcp_pub.hpp"
@@ -8,7 +9,6 @@
 #include <string>
 #include <memory>
 #include <map>
-#include <uv.h>
 
 namespace cpp_streamer
 {

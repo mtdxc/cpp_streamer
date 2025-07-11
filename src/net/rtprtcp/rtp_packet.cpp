@@ -1,4 +1,4 @@
-#include "rtp_packet.hpp"
+ï»¿#include "rtp_packet.hpp"
 #include "rtprtcp_pub.hpp"
 #include "logger.hpp"
 #include "timeex.hpp"
@@ -40,8 +40,8 @@ RtpPacket* RtpPacket::Parse(uint8_t* data, size_t len) {
     }
     uint8_t* payload = p;
     size_t payload_len = len - (size_t)(p - data);
-    uint8_t pad_len = 0;
 
+    uint8_t pad_len = 0;
     if (header->padding) {
         pad_len = data[len - 1];
         if (pad_len > 0) {
@@ -55,6 +55,42 @@ RtpPacket* RtpPacket::Parse(uint8_t* data, size_t len) {
     return new RtpPacket(header, ext, payload, payload_len, pad_len, len);
 }
 
+RtpPacket* MakeRtpPacket(HeaderExtension* ext, size_t payload_len) {
+    uint8_t* data = new uint8_t[RTP_PACKET_MAX_SIZE];
+    
+    RtpCommonHeader* header = (RtpCommonHeader*)data;
+    memset(header, 0, sizeof(RtpCommonHeader));
+    header->version = RTP_VERSION;
+
+    size_t ext_len = 0;
+    if (ext) {
+        header->extension = 1;
+        uint8_t* p = (uint8_t*)(header + 1);
+        memcpy(p, ext, 4 + 4 * ntohs(ext->length));
+        ext_len = 4 + 4 * ntohs(ext->length);
+    } else {
+        header->extension = 0;
+        ext_len = 0;
+    }
+
+    size_t data_len = payload_len + sizeof(RtpCommonHeader) + ext_len;
+    if (data_len > RTP_PACKET_MAX_SIZE) {
+        return nullptr;
+    }
+    RtpPacket* packet = RtpPacket::Parse(data, data_len);
+    packet->SetNeedDelete(true);
+
+    return packet;
+}
+
+RtpPacket* GenerateSinglePackets(uint8_t* data, size_t len, HeaderExtension* ext) {
+    RtpPacket* packet = MakeRtpPacket(ext, len);
+    uint8_t* payload = packet->GetPayload();
+    memcpy(payload, data, len);
+    packet->SetPayloadLength(len);
+    return packet;
+}
+
 RtpPacket::RtpPacket(RtpCommonHeader* header, HeaderExtension* ext,
                 uint8_t* payload, size_t payload_len,
                 uint8_t pad_len, size_t data_len) {
@@ -66,13 +102,13 @@ RtpPacket::RtpPacket(RtpCommonHeader* header, HeaderExtension* ext,
     payload_     = payload;
     payload_len_ = payload_len;
     pad_len_     = pad_len;
-
+    // æ€»é•¿åº¦
     data_len_    = data_len;
 
     local_ms_    = (int64_t)now_millisec();
 
     ParseExt();
-    // ²»ÓµÓÐÊý¾Ý
+    // ä¸æ‹¥æœ‰æ•°æ®
     need_delete_ = false;
 }
 
@@ -85,7 +121,6 @@ RtpPacket::~RtpPacket() {
 
 RtpPacket* RtpPacket::Clone(uint8_t* buffer) {
     uint8_t* new_data = nullptr;
-    
     if (buffer) {
         new_data = buffer;
     } else {
@@ -167,7 +202,6 @@ uint16_t RtpPacket::GetExtId(HeaderExtension* rtp_ext) {
     if (rtp_ext == nullptr) {
         return 0;
     }
-    
     return ntohs(rtp_ext->id);
 }
 
@@ -175,7 +209,6 @@ uint16_t RtpPacket::GetExtLength(HeaderExtension* rtp_ext) {
     if (rtp_ext == nullptr) {
         return 0;
     }
-    
     return ntohs(rtp_ext->length) * 4;
 }
 
@@ -183,8 +216,22 @@ uint8_t* RtpPacket::GetExtValue(HeaderExtension* rtp_ext) {
     if (rtp_ext == nullptr) {
         return 0;
     }
-    
     return rtp_ext->value;
+}
+
+bool RtpPacket::HasOnebyteExt(HeaderExtension* rtp_ext) {
+    return GetExtId(rtp_ext) == 0xBEDE;
+}
+
+bool RtpPacket::HasTwobytesExt(HeaderExtension* rtp_ext) {
+    /*
+           0               1
+           0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
+          +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+          |         0x100         |appbits|
+          +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    */
+    return (GetExtId(rtp_ext) & 0xfff0) == 0x1000;
 }
 
 void RtpPacket::ParseExt() {
@@ -224,6 +271,7 @@ void RtpPacket::ParseOnebyteExt() {
 */
     while (p < ext_end) {
         uint8_t id = (*p & 0xF0) >> 4;
+        // one bytes len å¿…é¡» + 1
         size_t len = (size_t)(*p & 0x0F) + 1;
 
         if (id == 0x0f)
@@ -242,9 +290,8 @@ void RtpPacket::ParseOnebyteExt() {
         else {
             p++;
         }
-
-        while ((p < ext_end) && (*p == 0))
-        {
+        // ç•¥è¿‡0å¡«å……å­—èŠ‚
+        while ((p < ext_end) && (*p == 0)) {
             p++;
         }
     }
@@ -298,21 +345,6 @@ void RtpPacket::ParseTwobytesExt() {
     }
 }
 
-bool RtpPacket::HasOnebyteExt(HeaderExtension* rtp_ext) {
-    return GetExtId(rtp_ext) == 0xBEDE;
-}
-
-bool RtpPacket::HasTwobytesExt(HeaderExtension* rtp_ext) {
-/*
-       0                   1
-       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
-      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-      |         0x100         |appbits|
-      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-*/
-    return (GetExtId(rtp_ext) & 0xfff0) == 0x1000;
-}
-
 uint8_t* RtpPacket::GetExtension(uint8_t id, uint8_t& len) {
     if (HasOnebyteExt(ext_)) {
         auto iter = onebyte_ext_map_.find(id);
@@ -349,7 +381,7 @@ bool RtpPacket::UpdateMid(uint8_t mid) {
         return false;
     }
 
-    // Ê®½øÖÆ×Ö·û´®·½Ê½
+    // åè¿›åˆ¶å­—ç¬¦ä¸²æ–¹å¼
     std::string mid_str = std::to_string(mid);
     memcpy(extern_value, mid_str.c_str(), mid_str.length());
     //update extension length

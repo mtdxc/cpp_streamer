@@ -6,13 +6,27 @@
 #include <stddef.h>
 #include <string>
 #include <sstream>
+
 #if defined(_WIN32) || defined(_WIN64)
 #include <winsock2.h>
 #pragma comment(lib, "ws2_32.lib") // Link with the Winsock library
+#define BIG_ENDIAN 1
+#define LITTLE_ENDIAN 0
+#define BYTE_ORDER LITTLE_ENDIAN
+#define __BYTE_ORDER BYTE_ORDER
+#define __BIG_ENDIAN BIG_ENDIAN
+#define __LITTLE_ENDIAN LITTLE_ENDIAN
 #else
 #include <arpa/inet.h>  // htonl(), htons(), ntohl(), ntohs()
+#if defined(__MACH__)
+#include <machine/endian.h>
+#define __BYTE_ORDER BYTE_ORDER
+#define __BIG_ENDIAN BIG_ENDIAN
+#define __LITTLE_ENDIAN LITTLE_ENDIAN
+#elif defined(__linux__)
+#include <endian.h>
 #endif
-
+#endif
 namespace cpp_streamer
 {
 
@@ -84,10 +98,16 @@ header |V=2|P|    RC   |   PT=SR=200   |             length            |
  */
 typedef struct RtcpCommonHeaderS
 {
+#if __BYTE_ORDER == __BIG_ENDIAN
+    uint8_t version : 2;
+    uint8_t padding : 1;
+    uint8_t count : 5;
+#else
     uint8_t count : 5;
     uint8_t padding : 1;
     uint8_t version : 2;
-    uint8_t packet_type : 8;
+#endif
+    uint8_t packet_type;
     uint16_t length;
 } RtcpCommonHeader;
 
@@ -100,19 +120,57 @@ header |V=2|P|  FMT    |       PT      |             length            |
  */
 typedef struct RtcpFbCommonHeaderS
 {
+#if __BYTE_ORDER == __BIG_ENDIAN
+    uint8_t version : 2;
+    uint8_t padding : 1;
+    uint8_t fmt : 5;
+#else
     uint8_t fmt : 5;
     uint8_t padding : 1;
     uint8_t version : 2;
-    uint8_t packet_type : 8;
-    uint16_t length : 16;
+#endif
+    uint8_t packet_type;
+    uint16_t length;
 } RtcpFbCommonHeader;
 
-typedef struct RtcpXrHeaderS
+/*
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |V=2|P|   FMT   |       PT      |          length               |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                  SSRC of packet sender                        |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                  SSRC of media source                         |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   :            Feedback Control Information (FCI)                 :
+   :                                                               :
+*/
+typedef struct
+{
+    uint32_t sender_ssrc;
+    uint32_t media_ssrc;
+} RtcpFbHeader;
+
+/*
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |V=2|P|reserved |   PT=XR=207   |          length               |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                          SSRC                                 |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |     BT        |   Reverse     |  block length                 |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   :            report block content (variable length)             : 
+   :                                                               :
+*/
+typedef struct
 {
     uint8_t  bt;
     uint8_t  reserver;
     uint16_t block_length;
-} RtcpXrHeader;
+} XrCommonData;
 
 /**
     0                   1                   2                   3
@@ -130,12 +188,21 @@ typedef struct RtcpXrHeaderS
  */
 typedef struct RtpCommonHeaderS
 {
+#if __BYTE_ORDER == __BIG_ENDIAN
+    uint8_t version : 2;
+    uint8_t padding : 1;
+    uint8_t extension : 1;
+    uint8_t csrc_count : 4;
+    uint8_t marker : 1;
+    uint8_t payload_type : 7;
+#else
     uint8_t csrc_count : 4;
     uint8_t extension : 1;
     uint8_t padding : 1;
     uint8_t version : 2;
     uint8_t payload_type : 7;
     uint8_t marker : 1;
+#endif
     uint16_t sequence;
     uint32_t timestamp;
     uint32_t ssrc;

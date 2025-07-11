@@ -1,12 +1,8 @@
 #ifndef RTCP_SR_HPP
 #define RTCP_SR_HPP
+
 #include "logger.hpp"
 #include "rtprtcp_pub.hpp"
-#include <stdint.h>
-#include <stddef.h>
-#include <string>
-#include <cstring>
-#include <sstream>
 
 namespace cpp_streamer
 {
@@ -65,7 +61,7 @@ public:
         uint32_t* ssrc_p = (uint32_t*)(rtcp_header_ + 1);
         sender_ssrc_ = 1;
         *ssrc_p = htonl(sender_ssrc_);
-        this->header_             = (RtcpSrBlock*)(ssrc_p + 1);
+        this->header_    = (RtcpSrBlock*)(ssrc_p + 1);
     }
 
     ~RtcpSrPacket() {
@@ -121,19 +117,12 @@ public:
 
 public:
     static RtcpSrPacket* Parse(uint8_t* data, size_t len) {
-        if (len != (sizeof(RtcpCommonHeader) + sizeof(uint32_t) + sizeof(RtcpSrBlock))) {
+        if (len < (sizeof(RtcpCommonHeader) + sizeof(uint32_t) + sizeof(RtcpSrBlock))) {
             CSM_THROW_ERROR("rtcp sr len(%lu) error", len);
         }
+
         RtcpCommonHeader* rtcp_header = (RtcpCommonHeader*)data;
-
         return new RtcpSrPacket(rtcp_header);
-    }
-
-    uint8_t* Serial(size_t& ret_len) {
-        uint8_t* ret_data = this->data;
-        ret_len = sizeof(RtcpCommonHeader) + sizeof(uint32_t) + sizeof(RtcpSrBlock);
-
-        return ret_data;
     }
 
     std::string Dump() {

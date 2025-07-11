@@ -1,7 +1,6 @@
 #include "peerconnection.hpp"
 #include "stun.hpp"
 #include "rtprtcp_pub.hpp"
-#include "rtcp_fb_pub.hpp"
 #include "rtcp_rr.hpp"
 #include "rtcp_sr.hpp"
 #include "rtcp_xr_dlrr.hpp"
@@ -153,7 +152,7 @@ void PeerConnection::SendStun(int64_t now_ms) {
         LogErrorf(logger_, "dtls ice information is empty");
         return;
     }
-    // @todo Ö»ÍùµÚÒ»¸öµØÖ··¢
+    // @todo åªå¾€ç¬¬ä¸€ä¸ªåœ°å€å‘
     IceInfo& ice = dtls_.ice_infos[0];
     assert(ice.net_type == ICE_UDP);
 
@@ -437,7 +436,7 @@ int PeerConnection::HandleXrDlrr(XrDlrrData* dlrr_block) {
 int PeerConnection::HandleRtcpXr(uint8_t* data, int data_len) {
     RtcpCommonHeader* header = (RtcpCommonHeader*)data;
     uint32_t* ssrc_p         = (uint32_t*)(header + 1);
-    RtcpXrHeader* xr_hdr     = (RtcpXrHeader*)(ssrc_p + 1);
+    XrCommonData* xr_hdr     = (XrCommonData*)(ssrc_p + 1);
     int64_t xr_len           = data_len - sizeof(RtcpCommonHeader) - 4;
 
     while(xr_len > 0) {
@@ -467,7 +466,7 @@ int PeerConnection::HandleRtcpXr(uint8_t* data, int data_len) {
         int64_t offset = 4 + ntohs(xr_hdr->block_length)*4;
         xr_len -= offset;
         data   += offset;
-        xr_hdr = (RtcpXrHeader*)data;
+        xr_hdr = (XrCommonData*)data;
     }
     return data_len;
 }

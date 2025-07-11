@@ -1,5 +1,6 @@
 #ifndef JITTER_BUFFER_HPP
 #define JITTER_BUFFER_HPP
+
 #include "rtp_packet.hpp"
 #include "jitterbuffer_pub.hpp"
 #include "logger.hpp"
@@ -9,7 +10,6 @@
 #include <stddef.h>
 #include <map>
 #include <memory>
-#include <uv.h>
 
 namespace cpp_streamer
 {

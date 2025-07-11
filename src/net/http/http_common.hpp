@@ -1,12 +1,12 @@
 #ifndef HTTP_COMMOM_HPP
 #define HTTP_COMMOM_HPP
+
 #include "tcp_session.hpp"
 #include "http_session.hpp"
 #include <string>
 #include <map>
 #include <stdint.h>
 #include <sstream>
-#include <map>
 
 namespace cpp_streamer
 {
