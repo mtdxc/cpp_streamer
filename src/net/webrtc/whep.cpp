@@ -154,7 +154,7 @@ int Whep::Start(const std::string& host, uint16_t port, const std::string& subpa
 
     ReleaseHttpClient();
     std::map<std::string, std::string> headers;
-    hc_ = new HttpClient(loop_, host_, port_, this, logger_, https_enable);
+    hc_ = new HttpClient(loop_, host_, port_, this, nullptr, https_enable);
     LogInfof(logger_, "whep http post host:%s, port:%d, subpath:%s",
             host_.c_str(), port_, subpath.c_str());
     start_ms_ = now_millisec();

@@ -42,8 +42,8 @@ int HttpClient::Post(const std::string& subpath, const std::map<std::string, std
     headers_   = headers;
 
     client_->Connect(host_, port_);
-    LogInfof(logger_, "http post connect host:%s, port:%d, subpath:%s, post data:%s", 
-            host_.c_str(), port_, subpath.c_str(), data.c_str());
+    LogInfof(logger_, "http post connect host:%s, port:%d, subpath:%s, post data:%d", 
+            host_.c_str(), port_, subpath.c_str(), data.length());
     return 0;
 }
 
