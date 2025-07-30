@@ -4,7 +4,7 @@
 #include "logger.hpp"
 #include "udp_client.hpp"
 #include "srtp_session.hpp"
-
+#include "stun.hpp"
 #include <stdint.h>
 #include <stddef.h>
 #include <string>
@@ -110,21 +110,22 @@ typedef enum
     ICE_UDP
 } ICE_NET_TYPE;
 
-class IceInfo
+class IceInfo : public UdpTuple
 {
 public:
     IceInfo() {}
     ~IceInfo() {}
 
     bool operator==(const IceInfo& info) {
-        return (info.net_type == this->net_type) 
-            && (info.hostip == this->hostip) 
+        return (info.type == this->type) 
+            && (info.ip_address == this->ip_address)
             && (info.port == this->port);
     }
 public:
-    ICE_NET_TYPE net_type;
-    std::string hostip;
-    uint16_t port;
+    ICE_NET_TYPE type;
+    int priority, rtt = 0;
+    std::string transId;
+    int64_t tick;
 };
 
 class PeerConnection;
@@ -166,7 +167,7 @@ public:
 
 public:
     UdpClient* udp_client_ = nullptr;
-    UdpTuple remote_address_;
+    IceInfo* remote_address_ = nullptr;
 
 public:
     std::string local_fragment_;
@@ -178,7 +179,10 @@ public:
 
 public:
     std::vector<IceInfo> ice_infos;
-
+    void addIceInfo(const IceInfo& info);
+    IceInfo* findIceInfo(const std::string& transId);
+    void SendStun();
+    void HandleStun(StunPacket* pkt, UdpTuple address);
 public:
     // The DtlsSrtp ciphers
     std::string srtp_ciphers_;

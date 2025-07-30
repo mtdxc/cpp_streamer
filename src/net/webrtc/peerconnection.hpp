@@ -81,7 +81,7 @@ public:
     virtual ~PeerConnection();
 
 public:
-    std::string CreateOfferSdp(WebRtcSdpDirection direction_type);
+    std::string CreateOfferSdp(WebRtcSdpDirection dir);
     int ParseAnswerSdp(const std::string& sdp);
     int SendVideoPacket(Media_Packet_Ptr pkt_ptr);
     int SendAudioPacket(Media_Packet_Ptr pkt_ptr);
@@ -205,6 +205,8 @@ public:
 public:
     void SetMsPull(bool enable) { mspull_ = enable; }
     bool GetMsPull() { return mspull_; }
+private://for mediasoup pull
+    bool mspull_ = false;
 
 private:
     void Report(const std::string& key, const std::string& value);
@@ -261,6 +263,7 @@ private:
 private:
     NTP_TIMESTAMP last_xr_ntp_ = {0, 0};
     int64_t last_xr_ms_ = -1;
+    int64_t last_rr_ms_ = -1;
     int64_t last_send_xr_dlrr_ms_ = -1;
 
 private:
@@ -278,14 +281,9 @@ private:
 private:
     MediaCallbackI* media_cb_ = nullptr;
 
-private:
-    int64_t last_rr_ms_ = -1;
-
 private://for rtp extern header
     std::map<int, RTP_EXT_INFO> rtp_ext_headers_;
 
-private://for mediasoup pull
-    bool mspull_ = false;
 };
 
 }

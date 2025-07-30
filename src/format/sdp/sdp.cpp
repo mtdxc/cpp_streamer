@@ -514,31 +514,20 @@ int SdpTransform::ParseLine(std::string line) {
         IceInfo ice_info;
         std::string candidate = line.substr(candidate_attr.length());
         std::vector<std::string> candidate_items;
-
+        // a=candidate:udpcandidate 1 udp 110 192.168.25.227 8000 typ host
         StringSplit(candidate, " ", candidate_items);
         if (candidate_items.size() > 6) {
             if (candidate_items[2] == "tcp") {
-                ice_info.net_type = ICE_TCP;
+                ice_info.type = ICE_TCP;
             } else if (candidate_items[2] == "udp") {
-                ice_info.net_type = ICE_UDP;
+                ice_info.type = ICE_UDP;
             } else {
-                ice_info.net_type = ICE_NET_UNKNOWN;
+                ice_info.type = ICE_NET_UNKNOWN;
             }
-            ice_info.hostip = candidate_items[4];
+            ice_info.priority = atoi(candidate_items[3].c_str());
+            ice_info.ip_address = candidate_items[4];
             ice_info.port   = atoi(candidate_items[5].c_str());
-
-            bool repeat = false;
-            for (auto& info : dtls_->ice_infos) {
-                if (info == ice_info) {
-                    repeat = true;
-                    break;
-                }
-            }
-            if (!repeat) {
-                LogInfof(logger_, "ice net type:%s, hostip:%s, port:%d",
-                        candidate_items[2].c_str(), ice_info.hostip.c_str(), ice_info.port);
-                dtls_->ice_infos.push_back(ice_info);
-            }
+            dtls_->addIceInfo(ice_info);
         }
         return 0;
     }

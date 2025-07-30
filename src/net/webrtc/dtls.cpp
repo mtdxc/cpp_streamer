@@ -207,6 +207,78 @@ static long openssl_dtls_bio_out_callback_ex(BIO *b, int oper, const char *argp,
     return retvalue;
 }
 
+void RtcDtls::addIceInfo(const IceInfo& ice_info) {
+    bool found = false;
+    for (auto& item : ice_infos) {
+        if (item == ice_info) {
+            found = true;
+            break;
+        }
+    }
+    if (!found) {
+        ice_infos.push_back(ice_info);
+        LogInfof(logger_, "addIceInfo type:%s, ip:%s, port:%d, priority:%d",
+            ice_info.type == ICE_TCP ? "tcp" : "udp", 
+            ice_info.ip_address.c_str(), ice_info.port, ice_info.priority);
+    }
+}
+
+IceInfo* RtcDtls::findIceInfo(const std::string&  transId) {
+    for (auto& item : ice_infos) {
+        if (item.transId == transId) {
+            return &item;
+        }
+    }
+    return nullptr;
+}
+
+void RtcDtls::SendStun()
+{
+    if (ice_infos.empty()) {
+        LogErrorf(logger_, "dtls ice information is empty");
+        return;
+    }
+
+    StunPacket pkt;
+    pkt.username_ = remote_fragment_ + ":" + local_fragment_;
+    LogDebugf(logger_, "stun username:%s", pkt.username_.c_str());
+    LogDebugf(logger_, "dtls remote frag:%s", remote_fragment_.c_str());
+    LogDebugf(logger_, "dtls local frag:%s", local_fragment_.c_str());
+    pkt.password_ = remote_pwd_;
+    pkt.add_msg_integrity_ = true;
+
+    for (auto& ice : ice_infos) {
+        if (ice.type != ICE_UDP)
+            continue;
+        ice.tick = now_millisec();
+        ice.transId = ByteCrypto::GetRandomString(12);
+        memcpy(pkt.transaction_id_, ice.transId.data(), 12);
+        pkt.has_use_candidate_ = (remote_address_ == &ice);
+        pkt.priority_ = ice.priority;
+
+        pkt.Serialize();
+
+        udp_client_->Write((char*)pkt.data_, pkt.data_len_, ice);
+        udp_client_->TryRead();
+    }
+}
+
+void RtcDtls::HandleStun(StunPacket* pkt, UdpTuple address)
+{
+    auto ice = findIceInfo(std::string((char*)pkt->transaction_id_, 12));
+    if (ice) {
+        ice->rtt = now_millisec() - ice->tick;
+        if (!remote_address_ || remote_address_->priority < ice->priority || pkt->has_use_candidate_) {
+            LogInfof(logger_, "stun select candidate addr:%s:%d rtt %d", address.ip_address.c_str(), address.port, ice->rtt);
+            remote_address_ = ice;
+        }
+        else {
+            LogDebugf(logger_, "stun update candidate addr:%s:%d rtt %d", address.ip_address.c_str(), address.port, ice->rtt);
+        }
+    }
+}
+
+
 RtcDtls::RtcDtls(PeerConnection* pc, Logger* logger):logger_(logger),pc_(pc) {
     for (auto& item : srtp_crypto_suite_vec) {
         if (!srtp_ciphers_.empty()) {
@@ -600,14 +672,14 @@ void RtcDtls::OnDtlsData(uint8_t* buf, int size) {
 
 int RtcDtls::OnWrite(uint8_t* data, int size) {
 
-    if (udp_client_ == nullptr) {
+    if (udp_client_ == nullptr || remote_address_ == nullptr) {
         LogErrorf(logger_, "udp client is not ready");
         return -1;
     }
 
     LogInfof(logger_, "dtls write data len:%d, remote address:%s", 
-            size, remote_address_.to_string().c_str());
-    udp_client_->Write((char*)data, size, remote_address_);
+            size, remote_address_->to_string().c_str());
+    udp_client_->Write((char*)data, size, *remote_address_);
     return 0;
 }
 

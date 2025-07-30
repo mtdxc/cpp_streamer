@@ -111,18 +111,14 @@ int PeerConnection::ParseAnswerSdp(const std::string& sdp) {
     if (answer_sdp_.ssrc_info_map_.empty()) {
         answer_sdp_.ssrc_info_map_ = offer_sdp_.ssrc_info_map_;
     }
+
     LogInfof(logger_, "audio ssrc:%u@%d%s, video ssrc:%u@%d%s, video rtx %d ssrc:%u@%d",
         answer_sdp_.GetAudioSsrc(), answer_sdp_.GetAudioPayloadType(), answer_sdp_.IsAudioNackEnable() ? " nack" : "",
-        answer_sdp_.GetVideoSsrc(), answer_sdp_.GetVideoPayloadType(), answer_sdp_.IsVideoNackEnable()?" nack":"",
+        answer_sdp_.GetVideoSsrc(), answer_sdp_.GetVideoPayloadType(), answer_sdp_.IsVideoNackEnable() ? " nack" : "",
         answer_sdp_.IsVideoRtxEnable(), answer_sdp_.GetVideoRtxSsrc(), answer_sdp_.GetVideoRtxPayloadType());
-    /*
-    LogInfof(logger_, "video rate:%d, video rtx rate:%d, audio rate:%d",
-            answer_sdp_.GetVideoClockRate(),
-            answer_sdp_.GetVideoRtxClockRate(),
-            answer_sdp_.GetAudioClockRate());
-    */
+
     if (pc_state_ >= PC_SDP_DONE_STATE) {
-        LogWarnf(logger_, "ParseAnswerSdp error:  peer connection state is %d", pc_state_);
+        LogWarnf(logger_, "ParseAnswerSdp error: wrong state %d", pc_state_);
         return 0;
     }
     pc_state_ = PC_SDP_DONE_STATE;
@@ -148,33 +144,7 @@ void PeerConnection::SendStun(int64_t now_ms) {
         last_stun_ms_ = now_ms;
     }
 
-    if (dtls_.ice_infos.empty()) {
-        LogErrorf(logger_, "dtls ice information is empty");
-        return;
-    }
-    // @todo 只往第一个地址发
-    IceInfo& ice = dtls_.ice_infos[0];
-    assert(ice.net_type == ICE_UDP);
-
-    UdpTuple remote_address(ice.hostip, ice.port);
-    dtls_.remote_address_ = remote_address;
-
-    StunPacket pkt;
-    pkt.username_ = dtls_.remote_fragment_;
-    pkt.username_ += ":";
-    pkt.username_ += dtls_.local_fragment_;
-    LogDebugf(logger_, "stun username:%s", pkt.username_.c_str());
-    LogDebugf(logger_, "dtls remote frag:%s", dtls_.remote_fragment_.c_str());
-    LogDebugf(logger_, "dtls local frag:%s", dtls_.local_fragment_.c_str());
-    pkt.password_ = dtls_.remote_pwd_;
-    pkt.has_use_candidate_ = true;
-    pkt.add_msg_integrity_ = true;
-    pkt.priority_ = 100;
-
-    pkt.Serialize();
-
-    udp_client_->Write((char*)pkt.data_, pkt.data_len_, remote_address);
-    udp_client_->TryRead();
+    dtls_.SendStun();
 }
 
 std::string PeerConnection::CreateOfferSdp(WebRtcSdpDirection direction_type) {
@@ -564,10 +534,12 @@ void PeerConnection::OnRead(const char* data, size_t data_size, UdpTuple address
                     pc_ipaddr_str_ = ip;
                     pc_udp_port_ = port;
                 }
+
+                dtls_.HandleStun(pkt, address);
                 delete pkt;
             }
             //LogInfof(logger_, "receive stun packet:%s", pkt->Dump().c_str());
-            if (pc_state_ < PC_STUN_DONE_STATE) {
+            if (pc_state_ < PC_STUN_DONE_STATE && dtls_.remote_address_) {
                 pc_state_ = PC_STUN_DONE_STATE;
                 Report("stun", "ready");
                 dtls_.Start();
@@ -673,7 +645,7 @@ void PeerConnection::OnDtlsConnected(CRYPTO_SUITE_ENUM suite,
 }
 
 void PeerConnection::SendRtpPacket(uint8_t* data, size_t len) {
-    if (!write_srtp_) {
+    if (!write_srtp_ || !dtls_.remote_address_) {
         LogErrorf(logger_, "write_srtp is not ready");
         return;
     }
@@ -683,12 +655,12 @@ void PeerConnection::SendRtpPacket(uint8_t* data, size_t len) {
         LogErrorf(logger_, "encrypt_rtp error");
         return;
     }
-    udp_client_->Write((char*)data, len, dtls_.remote_address_);
+    udp_client_->Write((char*)data, len, *dtls_.remote_address_);
     udp_client_->TryRead();
 }
 
 void PeerConnection::SendRtcpPacket(uint8_t* data, size_t len) {
-    if (!write_srtp_) {
+    if (!write_srtp_ || !dtls_.remote_address_) {
         return;
     }
     bool ret = write_srtp_->EncryptRtcp(const_cast<uint8_t**>(&data), &len);
@@ -696,7 +668,7 @@ void PeerConnection::SendRtcpPacket(uint8_t* data, size_t len) {
         LogErrorf(logger_, "encrypt rtcp error");
         return;
     }
-    udp_client_->Write((char*)data, len, dtls_.remote_address_);
+    udp_client_->Write((char*)data, len, *dtls_.remote_address_);
     udp_client_->TryRead();
 }
 
@@ -1050,28 +1022,12 @@ void PeerConnection::SetRemoteIceUserFrag(const std::string& user_frag) {
 }
 
 void PeerConnection::SetRemoteUdpAddress(const std::string& ip, uint16_t port) {
-    dtls_.remote_address_.ip_address = ip;
-    dtls_.remote_address_.port = port;
-
     IceInfo ice_info;
-    ice_info.net_type = ICE_UDP;
-    ice_info.hostip   = ip;
+    ice_info.type = ICE_UDP;
+    ice_info.ip_address = ip;
     ice_info.port     = port;
-
-    if (dtls_.ice_infos.empty()) {
-        dtls_.ice_infos.push_back(ice_info);
-    } else {
-        bool found = false;
-        for (auto& item : dtls_.ice_infos) {
-            if (item == ice_info) {
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            dtls_.ice_infos.push_back(ice_info);
-        }
-    }
+    ice_info.priority = 110;
+    dtls_.addIceInfo(ice_info);
 }
 
 void PeerConnection::SetFingerPrintsSha256(const std::string& sha256_value) {
