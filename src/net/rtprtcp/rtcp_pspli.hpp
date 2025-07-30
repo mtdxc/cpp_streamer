@@ -29,7 +29,7 @@ public:
     }
 
     static RtcpPsPli* Parse(uint8_t* data, size_t len) {
-        if (len != (sizeof(RtcpFbCommonHeader) + sizeof(RtcpFbHeader))) {
+        if (len != sizeof(RtcpPsPli::data)) {
             return nullptr;
         }
         RtcpPsPli* pkt = new RtcpPsPli();
@@ -47,7 +47,7 @@ public:
     uint32_t GetMediaSsrc() { return (uint32_t)ntohl(fb_header_->media_ssrc); }
 
     uint8_t* GetData() { return this->data; }
-    size_t GetDataLen() { return sizeof(RtcpFbCommonHeader) + sizeof(RtcpFbHeader); }
+    size_t GetDataLen() { return sizeof(data); }
 
     std::string Dump() {
         std::stringstream ss;
@@ -59,7 +59,7 @@ public:
     }
 
 private:
-    uint8_t data[12];
+    uint8_t data[sizeof(RtcpFbCommonHeader) + sizeof(RtcpFbHeader)];
     RtcpFbCommonHeader* header_ = nullptr;
     RtcpFbHeader* fb_header_    = nullptr;
 };

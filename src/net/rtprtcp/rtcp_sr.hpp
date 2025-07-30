@@ -39,8 +39,7 @@ class RtcpSrPacket
 {
 public:
     RtcpSrPacket(RtcpCommonHeader* rtcp_header) {
-        size_t len = sizeof(RtcpCommonHeader) + sizeof(uint32_t) + sizeof(RtcpSrBlock);
-        memcpy(this->data, (uint8_t*)rtcp_header, len);
+        memcpy(this->data, (uint8_t*)rtcp_header, sizeof(data));
         this->rtcp_header_  = (RtcpCommonHeader*)(this->data);
         uint32_t* ssrc_p    = (uint32_t*)(this->rtcp_header_ + 1);
         this->sender_ssrc_  = ntohl(*ssrc_p);
@@ -117,7 +116,7 @@ public:
 
 public:
     static RtcpSrPacket* Parse(uint8_t* data, size_t len) {
-        if (len < (sizeof(RtcpCommonHeader) + sizeof(uint32_t) + sizeof(RtcpSrBlock))) {
+        if (len < sizeof(RtcpSrPacket::data)) {
             CSM_THROW_ERROR("rtcp sr len(%lu) error", len);
         }
 
@@ -140,13 +139,13 @@ public:
     }
 
     uint8_t* GetData() { return this->data; }
-    size_t GetDataLen() { return sizeof(RtcpCommonHeader) + sizeof(uint32_t) + sizeof(RtcpSrBlock); }
+    size_t GetDataLen() { return sizeof(data); }
 
 private:
     RtcpCommonHeader* rtcp_header_ = nullptr;
     uint32_t sender_ssrc_          = 0;
     RtcpSrBlock* header_           = nullptr;
-    uint8_t data[1500];
+    uint8_t data[sizeof(RtcpCommonHeader) + sizeof(uint32_t) + sizeof(RtcpSrBlock)];
 };
 
 }

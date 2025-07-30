@@ -48,14 +48,12 @@ public:
     XrRrt()
     {
         memset(data, 0, sizeof(data));
-        data_len = sizeof(RtcpCommonHeader) + 4 + sizeof(XrCommonData) + sizeof(XrRrtData);
-
         header = (RtcpCommonHeader*)data;
         header->version = 2;
         header->padding = 0;
         header->count   = 0;
         header->packet_type = RTCP_XR;
-        header->length      = htons((data_len)/4 - 1);
+        header->length      = htons(sizeof(data)/4 - 1);
 
         ssrc_p = (uint32_t*)(header + 1);
         XrCommonData* rrt_header = (XrCommonData*)(ssrc_p + 1);
@@ -90,17 +88,16 @@ public:
     }
 
     size_t GetDataLen() {
-        return data_len;
+        return sizeof(data);
     }
 
     void parse(uint8_t* rtcp_data, size_t len) {
-        assert(len == data_len);
+        assert(len == sizeof(data));
         memcpy(data, rtcp_data, len);
     }
 
 private:
-    uint8_t data[RTP_PACKET_MAX_SIZE];
-    size_t data_len = 0;
+    uint8_t data[sizeof(RtcpCommonHeader) + 4 + sizeof(XrCommonData) + sizeof(XrRrtData)];
     RtcpCommonHeader* header = nullptr;
     uint32_t* ssrc_p           = nullptr;
     XrRrtData* rrt_block     = nullptr;
