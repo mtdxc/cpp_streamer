@@ -16,50 +16,28 @@
 #include <cstring>
 #include <sstream>
 #include <set>
+#include <map>
 
 namespace cpp_streamer
 {
 #define RTCP_RR_INTERVAL (1*1000)
-
 RTP_EXT_TYPE GetRtpExtType(const std::string& uri) {
-    RTP_EXT_TYPE ret_type;
-    if (uri == "urn:ietf:params:rtp-hdrext:sdes:mid") {
-        ret_type = MID_TYPE;
+#define XX(type, url) {url, RTP_EXT_TYPE::type},
+    static std::map<std::string/*ext*/, RTP_EXT_TYPE/*id*/> s_type_to_url = { RTP_EXT_MAP(XX) };
+#undef XX
+    return s_type_to_url[uri];
+}
+
+const char* RtpExtUri(RTP_EXT_TYPE ext) {
+#define XX(type, uri) case RTP_EXT_TYPE::type: return uri;
+    switch (ext)
+    {
+    RTP_EXT_MAP(XX)
+    default:
+        break;
     }
-    else if (uri == "urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id") {
-        ret_type = RTP_STREAMID_TYPE;
-    }
-    else if (uri == "urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id") {
-        ret_type = RP_RTP_STREAMID_TYPE;
-    }
-    else if (uri == "http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time") {
-        ret_type = ABS_SEND_TIME_TYPE;
-    }
-    else if (uri == "http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01") {
-        ret_type = TCC_WIDE_TYPE;
-    }
-    else if (uri == "urn:ietf:params:rtp-hdrext:ssrc-audio-level") {
-        ret_type = SSRC_AUDIO_LEVEL_TYPE;
-    }
-    else if (uri == "http://tools.ietf.org/html/draft-ietf-avtext-framemarking-07") {
-        ret_type = AVTEXT_FRAMEMARKING_TYPE;
-    }
-    else if (uri == "urn:ietf:params:rtp-hdrext:framemarking") {
-        ret_type = RTP_HDREXT_FRAMEMARKING_TYPE;
-    }
-    else if (uri == "urn:3gpp:video-orientation") {
-        ret_type = VIDEO_ORIENTATION_TYPE;
-    }
-    else if (uri == "urn:ietf:params:rtp-hdrext:toffset") {
-        ret_type = TOFFSET_TYPE;
-    }
-    else if (uri == "http://www.webrtc.org/experiments/rtp-hdrext/abs-capture-time") {
-        ret_type = ABS_CAPTURE_TIME_TYPE;
-    }
-    else {
-        CSM_THROW_ERROR("unknown rtp ext type:%s", uri.c_str());
-    }
-    return ret_type;
+#undef XX
+    return nullptr;
 }
 
 const char* GetDirectionString(WebRtcSdpDirection dir) {

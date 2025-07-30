@@ -37,11 +37,11 @@ namespace cpp_streamer
  +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
 */
 
-typedef struct {
+struct XrDlrrData {
     uint32_t ssrc;
     uint32_t lrr;
     uint32_t dlrr;
-} XrDlrrData;
+};
 
 inline void InitDlrrHeader(XrCommonData* dlrr_header) {
     dlrr_header->bt = XR_DLRR;

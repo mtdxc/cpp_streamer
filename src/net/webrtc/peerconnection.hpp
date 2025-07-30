@@ -16,21 +16,34 @@
 
 namespace cpp_streamer
 {
-typedef enum {
-    MID_TYPE,
-    RTP_STREAMID_TYPE,
-    RP_RTP_STREAMID_TYPE,
-    ABS_SEND_TIME_TYPE,
-    TCC_WIDE_TYPE,
-    AVTEXT_FRAMEMARKING_TYPE,
-    RTP_HDREXT_FRAMEMARKING_TYPE,
-    SSRC_AUDIO_LEVEL_TYPE,
-    VIDEO_ORIENTATION_TYPE,
-    TOFFSET_TYPE,
-    ABS_CAPTURE_TIME_TYPE
-} RTP_EXT_TYPE;
+#define RTP_EXT_MAP(XX) \
+    XX(MID_TYPE,                 "urn:ietf:params:rtp-hdrext:sdes:mid") \
+    XX(RTP_STREAMID_TYPE,        "urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id") \
+    XX(RP_RTP_STREAMID_TYPE,     "urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id") \
+    XX(ABS_SEND_TIME_TYPE,       "http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time") \
+    XX(TCC_WIDE_TYPE,            "http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01") \
+    XX(AVTEXT_FRAMEMARKING_TYPE, "http://tools.ietf.org/html/draft-ietf-avtext-framemarking-07") \
+    XX(RTP_HDREXT_FRAMEMARKING_TYPE, "urn:ietf:params:rtp-hdrext:framemarking") \
+    XX(SSRC_AUDIO_LEVEL_TYPE,    "urn:ietf:params:rtp-hdrext:ssrc-audio-level") \
+    XX(VIDEO_ORIENTATION_TYPE,   "urn:3gpp:video-orientation") \
+    XX(TOFFSET_TYPE,             "urn:ietf:params:rtp-hdrext:toffset") \
+    XX(ABS_CAPTURE_TIME_TYPE,    "http://www.webrtc.org/experiments/rtp-hdrext/abs-capture-time") \
+    XX(video_timing,             "http://www.webrtc.org/experiments/rtp-hdrext/video-timing") \
+    XX(color_space,              "http://www.webrtc.org/experiments/rtp-hdrext/color-space") \
+    XX(csrc_audio_level,         "urn:ietf:params:rtp-hdrext:csrc-audio-level") \
+    XX(video_content_type,       "http://www.webrtc.org/experiments/rtp-hdrext/video-content-type") \
+    XX(playout_delay,            "http://www.webrtc.org/experiments/rtp-hdrext/playout-delay") \
+    XX(encrypt,                  "urn:ietf:params:rtp-hdrext:encrypt")
 
+enum RTP_EXT_TYPE {
+    padding = 0,
+#define XX(type, uri) type,
+    RTP_EXT_MAP(XX)
+#undef XX
+    reserved = 15,
+};
 RTP_EXT_TYPE GetRtpExtType(const std::string& uri);
+const char* RtpExtUri(RTP_EXT_TYPE ext);
 
 typedef struct RTP_EXT_INFO_S {
     int id;
