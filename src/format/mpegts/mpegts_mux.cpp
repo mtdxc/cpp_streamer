@@ -216,7 +216,7 @@ int MpegtsMux::InputPacket(Media_Packet_Ptr pkt_ptr) {
             LogInfof(logger_, "set video codec type:%s", codectype_tostring(pkt_ptr->codec_type_));
         } else if (pkt_ptr->av_type_ == MEDIA_AUDIO_TYPE) {
             audio_ready_ = true;
-            LogInfof(logger_, "set opus codec type:%s", codectype_tostring(pkt_ptr->codec_type_));
+            LogInfof(logger_, "set audio codec type:%s", codectype_tostring(pkt_ptr->codec_type_));
             SetAudioCodec(pkt_ptr->codec_type_);
         }
         wait_queue_.push(pkt_ptr);

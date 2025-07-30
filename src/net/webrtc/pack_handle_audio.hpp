@@ -33,7 +33,7 @@ public:
         audio_pkt_ptr->dts_        = dts;
         audio_pkt_ptr->pts_        = dts;
 
-        LogDebugf(logger_, "audio packet dts:%ld, payload:%lu", dts, pkt_ptr->pkt->GetPayloadLength());
+        // LogDebugf(logger_, "audio packet dts:%ld, size:%lu", dts, pkt_ptr->pkt->GetPayloadLength());
         audio_pkt_ptr->buffer_ptr_->AppendData((char*)pkt_ptr->pkt->GetPayload(), pkt_ptr->pkt->GetPayloadLength());
         cb_->MediaPacketOutput(audio_pkt_ptr);
     }

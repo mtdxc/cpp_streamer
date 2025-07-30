@@ -18,13 +18,14 @@ NackGenerator::~NackGenerator() {
 }
 
 void NackGenerator::UpdateRtt(int64_t rtt) {
-    LogInfof(logger_, "updateRTT:%ld", rtt);
+    LogInfof(logger_, "nack %u updateRTT %ld", ssrc_, rtt);
     rtt_ = rtt;
 }
 
-void NackGenerator::UpdateNackList(RtpPacket* pkt) {
+void NackGenerator::InputPacket(RtpPacket* pkt) {
     uint16_t seq = pkt->GetSeq();
-
+    if (pkt->GetSsrc()!=ssrc_)
+        ssrc_ = pkt->GetSsrc();
     if (!init_flag_) {
         init_flag_ = true;
         last_seq_  = seq;
@@ -36,14 +37,14 @@ void NackGenerator::UpdateNackList(RtpPacket* pkt) {
         return;
     }
 
-    //LogInfof(logger_, "nack packet seq:%d", seq);
+    //LogInfof(logger_, "nack %u packet seq:%d", ssrc_, seq);
     if (SeqLowerThan(seq, last_seq_)) {
         auto iter = nack_map_.find(seq);
 
         //the seq has been in the nack list, remove it.
         if (iter != nack_map_.end()) {
             nack_map_.erase(iter);
-            LogDebugf(logger_, "remove from nack map, ssrc:%u, seq:%d, last seq:%d, pt:%d, rtt:%ld",
+            LogInfof(logger_, "nack %u recover seq:%d, last seq:%d, pt:%d, rtt:%ld",
                 pkt->GetSsrc(), seq, last_seq_, pkt->GetPayloadType(), rtt_);
             return;
         }
@@ -69,7 +70,7 @@ void NackGenerator::UpdateNackList(RtpPacket* pkt) {
     uint16_t seq_end   = seq;
     
     last_seq_ = seq;
-
+    LogInfof(logger_, "nack %u detect lost %d->%d", ssrc_, seq_start + 1, seq_end - 1);
     //add seqs in nack list
     for (uint16_t key_seq = seq_start + 1; key_seq < seq_end; key_seq++) {
         if (0 == nack_map_.count(key_seq)) {
@@ -108,7 +109,7 @@ void NackGenerator::OnTimer() {
     }
 
     if (nack_map_.size() > NACK_LIST_MAX) {
-        LogWarnf(logger_, "nack list overflow: got %lu, max %d", nack_map_.size(), NACK_LIST_MAX);
+        LogWarnf(logger_, "nack %u list overflow: got %lu, max %d", ssrc_, nack_map_.size(), NACK_LIST_MAX);
         while (nack_map_.size() > NACK_LIST_MAX) {
             nack_map_.erase(nack_map_.begin());
         }

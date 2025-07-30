@@ -8,8 +8,6 @@
 namespace cpp_streamer
 {
 
-#define SEND_BUFFER_SIZE 2048
-
 RtcSendStream::RtcSendStream(MEDIA_PKT_TYPE type, 
             uint32_t ssrc, uint8_t payload, 
             int clock_rate, bool nack, 
@@ -23,26 +21,26 @@ RtcSendStream::RtcSendStream(MEDIA_PKT_TYPE type,
 
     last_sr_ntp_ts_ = {0, 0};
 
-    send_buffer_.resize(SEND_BUFFER_SIZE);
+    send_buffer_.resize(type == MEDIA_VIDEO_TYPE ? 2048 : 512);
     for (auto& item : send_buffer_) {
         item.last_ms = 0;
         item.retry_count = 0;
         item.pkt = nullptr;
     }
-    LogInfof(logger, "RtcSendStream construct type:%s, ssrc:%u, payload:%d, clock rate:%d, nack:%d",
-        avtype_tostring(type), ssrc, payload, clock_rate, nack);
+    LogInfof(logger, "RtcSendStream %u construct type:%s, payload:%d, clock rate:%d, nack:%d",
+        ssrc, avtype_tostring(type), payload, clock_rate, nack);
 }
 
 void RtcSendStream::SetRtx(uint8_t pt, uint32_t ssrc) {
     rtx_payload_ = pt;
     rtx_ssrc_ = ssrc;
     has_rtx_ = pt || ssrc;
-    LogInfof(logger_, "RtcSendStream ssrc:%u, setRtx pt:%d ssrc:%u", ssrc_, pt, ssrc);
+    LogInfof(logger_, "RtcSendStream %u setRtx pt:%d ssrc:%u", ssrc_, pt, ssrc);
 }
 
 RtcSendStream::~RtcSendStream()
 {
-    LogInfof(logger_, "destruct RtcSendStream %s", avtype_tostring(media_type_));
+    LogInfof(logger_, "~RtcSendStream %u %s", ssrc_, avtype_tostring(media_type_));
 
     for (auto& item : send_buffer_) {
         item.last_ms     = 0;
@@ -65,7 +63,7 @@ void RtcSendStream::SendPacket(Media_Packet_Ptr pkt_ptr) {
         }
         SendAudioPacket(pkt_ptr);
     } else {
-        LogErrorf(logger_, "media packet av type:%d is not supported", pkt_ptr->av_type_);
+        LogErrorf(logger_, "RtcSendStream %u packet type:%d is not supported", ssrc_, pkt_ptr->av_type_);
     }
 }
 
@@ -95,7 +93,7 @@ void RtcSendStream::SendAudioPacket(Media_Packet_Ptr pkt_ptr) {
     pkt->SetSeq(seq_++);
     pkt->SetTimestamp((uint32_t)ts);
     pkt->SetMarker(1);
-    //LogInfof(logger_, "send audio packet:%s", pkt->Dump().c_str());
+    //LogInfof(logger_, "RtcSendStream %u send audio packet:%s", ssrc_, pkt->Dump().c_str());
 
     SendAudioRtpPacket(pkt);
     delete pkt;
@@ -348,13 +346,13 @@ RtcpSrPacket* RtcSendStream::GetRtcpSr(int64_t now_ms) {
 
 void RtcSendStream::SaveBuffer(RtpPacket* pkt) {
     if (nack_enable_) {
-        size_t index = pkt->GetSeq() % SEND_BUFFER_SIZE;
+        size_t index = pkt->GetSeq() % send_buffer_.size();
         SendRtpPacketInfo& info = send_buffer_[index];
         if (info.pkt) {
             delete info.pkt;
             info.pkt = nullptr;
         }
-        //LogInfof(logger_, "save buffer seq:%d, index:%lu", pkt->GetSeq(), index);
+        //LogInfof(logger_, "RtcSendStream %u save buffer seq:%d, index:%lu", ssrc_, pkt->GetSeq(), index);
         info.pkt         = pkt->Clone(nullptr);
         info.retry_count = 0;
         info.last_ms     = 0;
@@ -362,16 +360,15 @@ void RtcSendStream::SaveBuffer(RtpPacket* pkt) {
 }
 
 void RtcSendStream::ResendRtpPacket(uint16_t seq) {
-    size_t index = seq % SEND_BUFFER_SIZE;
-
+    size_t index = seq % send_buffer_.size();
     SendRtpPacketInfo& info = send_buffer_[index];
     if (!info.pkt) {
-        LogWarnf(logger_, "fail to find rtp packet by seq:%d, index:%lu", seq, index);
+        LogWarnf(logger_, "RtcSendStream %u fail to find rtp packet by seq:%d, index:%lu", ssrc_, seq, index);
         return;
     }
     if (info.pkt->GetSeq() != seq) {
-        LogWarnf(logger_, "fail to get rtp packet(%d) by seq:%d, index:%lu", 
-                seq, info.pkt->GetSeq(), index);
+        LogWarnf(logger_, "RtcSendStream %u fail to get rtp packet(%d) by seq:%d, index:%lu", 
+                ssrc_, seq, info.pkt->GetSeq(), index);
         return;
     }
 
@@ -382,19 +379,19 @@ void RtcSendStream::ResendRtpPacket(uint16_t seq) {
     } else {
         float interval = avg_rtt_ > 10 ? avg_rtt_ / 2 : avg_rtt_;
         if ((float)(now_ms - info.last_ms + 10) < interval) {
-            LogDebugf(logger_, "resend too often and ignore nack request, interval:%ld, rtt:%f",
-                    now_ms - info.last_ms, avg_rtt_);
+            LogDebugf(logger_, "RtcSendStream %u resend too often and ignore nack request, interval:%ld, rtt:%f",
+                    ssrc_, now_ms - info.last_ms, avg_rtt_);
             return;
         }
         info.retry_count++;
         if (info.retry_count > 5) {
-            LogInfof(logger_, "resend times(%d) is too large, seq:%d", info.retry_count,seq);
+            LogInfof(logger_, "RtcSendStream %u resend times(%d) is too large, seq:%d", ssrc_, info.retry_count,seq);
         }
     }
     info.last_ms = now_ms;
 
     resend_cnt_++;
-    LogDebugf(logger_, "resend packet seq:%d, retry count:%d", seq, info.retry_count);
+    LogDebugf(logger_, "RtcSendStream %u resend packet seq:%d, retry count:%d", ssrc_, seq, info.retry_count);
     if (has_rtx_) {
         RtpPacket* rtx_pkt = info.pkt->Clone();
         rtx_pkt->RtxEncode(rtx_payload_, rtx_ssrc_, rtx_seq_++);
@@ -438,8 +435,8 @@ void RtcSendStream::HandleRtcpRr(RtcpRrBlockInfo& block) {
 
     avg_rtt_ += (rtt_ - avg_rtt_) / 4.0;
 
-    LogDebugf(logger_, "handle rtcp rr media(%s), ssrc:%u, lost total:%u, lost rate:%.03f, jitter:%u, rtt_:%.02f, avg rtt:%.02f",
-            avtype_tostring(media_type_), ssrc_, lost_total_, lost_rate_, jitter_, rtt_, avg_rtt_);
+    LogDebugf(logger_, "RtcSendStream %u handle rtcp rr media(%s), lost total:%u, lost rate:%.03f, jitter:%u, rtt_:%.02f, avg rtt:%.02f",
+        ssrc_, avtype_tostring(media_type_), lost_total_, lost_rate_, jitter_, rtt_, avg_rtt_);
 
 }
 
@@ -447,7 +444,7 @@ void RtcSendStream::HandleRtcpNack(RtcpFbNack* nack_pkt) {
     std::vector<uint16_t> lost_seqs = nack_pkt->GetLostSeqs();
 
     for (RtcpNackBlock* block : nack_pkt->nack_blocks_) {
-        LogInfof(logger_, "nack block packetId:0x%04x, mask:0x%04x", ntohs(block->packet_id), ntohs(block->lost_bitmap));
+        LogInfof(logger_, "RtcSendStream %u nack block packetId:0x%04x, mask:0x%04x", ssrc_, ntohs(block->packet_id), ntohs(block->lost_bitmap));
     }
     std::stringstream ss;
     ss << "[";
@@ -455,7 +452,7 @@ void RtcSendStream::HandleRtcpNack(RtcpFbNack* nack_pkt) {
         ss << " " << seq;
     }
     ss << " ]";
-    LogInfof(logger_, "media ssrc:%u, type:%s, nack lost seqs:%s, avg rtt:%.02f, nack:%s",
+    LogInfof(logger_, "RtcSendStream %u type:%s, nack lost seqs:%s, avg rtt:%.02f, nack:%s",
         nack_pkt->GetMediaSsrc(), avtype_tostring(media_type_),
         ss.str().c_str(), avg_rtt_, nack_enable_ ? "enable" : "disable");
 

@@ -46,7 +46,7 @@ public:
     NackGenerator(uv_loop_t* loop, Logger* logger, NackGeneratorCallbackI* cb);
     virtual ~NackGenerator();
 
-    void UpdateNackList(RtpPacket* pkt);
+    void InputPacket(RtpPacket* pkt);
     void UpdateRtt(int64_t rtt);
 
 protected:
@@ -59,6 +59,7 @@ private:
     NackGeneratorCallbackI* cb_ = nullptr;
     bool init_flag_ = false;
     uint16_t last_seq_ = 0;
+    uint32_t ssrc_ = 0;
     std::map<uint16_t, NACK_INFO> nack_map_;
     int64_t rtt_ = NACK_DEFAULT_RTT;
 };

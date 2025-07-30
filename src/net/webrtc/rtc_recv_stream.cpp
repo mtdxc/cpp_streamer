@@ -7,33 +7,33 @@ namespace cpp_streamer
 {
 #define REQ_KEYFRAME_INTERVAL (5*1000)
 
-RtcRecvStream::RtcRecvStream(MEDIA_PKT_TYPE type, 
-        uint32_t ssrc, uint8_t payload, 
-        int clock_rate, bool nack, 
-        RtcSendStreamCallbackI* cb,
-        Logger* logger, uv_loop_t* loop):logger_(logger)
-                                         , media_type_(type)
-                                         , nack_enable_(nack)
-                                         , ssrc_(ssrc)
-                                         , pt_(payload)
-                                         , clock_rate_(clock_rate)
-                                         , nack_generator_(loop, logger, this)
-                                         , send_cb_(cb)
+RtcRecvStream::RtcRecvStream(MEDIA_PKT_TYPE type,
+	uint32_t ssrc, uint8_t payload,
+	int clock_rate, bool nack,
+	RtcSendStreamCallbackI* cb,
+	Logger* logger, uv_loop_t* loop) :logger_(logger)
+	, media_type_(type)
+	, nack_enable_(nack)
+	, ssrc_(ssrc)
+	, pt_(payload)
+	, clock_rate_(clock_rate)
+	, nack_generator_(loop, logger, this)
+	, send_cb_(cb)
 {
     has_rtx_ = false;
-    LogInfof(logger_, "RtcRecvStream construct type:%s, ssrc:%u, payload:%d, clock rate:%d, nack:%d",
-        avtype_tostring(type), ssrc, payload, clock_rate, nack);
+    LogInfof(logger_, "RtcRecvStream %u construct type:%s, ssrc:%u, payload:%d, clock rate:%d, nack:%d",
+        ssrc, avtype_tostring(type), payload, clock_rate, nack);
 }
 
 void RtcRecvStream::SetRtx(uint8_t pt, uint32_t ssrc) {
     rtx_payload_ = pt;
     rtx_ssrc_ = ssrc;
     has_rtx_ = pt || ssrc;
-    LogInfof(logger_, "RtcRecvStream ssrc:%u, setRtx pt:%d ssrc:%u", ssrc_, pt, ssrc);
+    LogInfof(logger_, "RtcRecvStream %u setRtx pt:%d ssrc:%u", ssrc_, pt, ssrc);
 }
 
 RtcRecvStream::~RtcRecvStream() {
-    LogInfof(logger_, "RtcRecvStream destruct type:%s", avtype_tostring(media_type_));
+    LogInfof(logger_, "~RtcRecvStream %u type:%s", ssrc_, avtype_tostring(media_type_));
 }
 
 void RtcRecvStream::GenerateJitter(uint32_t rtp_timestamp, int64_t recv_pkt_ms) {
@@ -52,7 +52,6 @@ void RtcRecvStream::GenerateJitter(uint32_t rtp_timestamp, int64_t recv_pkt_ms) 
     d = (d < 0) ? (-d) : d;
 
     jitter_ += (d - jitter_)/8.0;
-
     return;
 }
 
@@ -61,11 +60,7 @@ void RtcRecvStream::HandleRtpPacket(RtpPacket* pkt) {
     uint16_t seq = pkt->GetSeq();
 
     if (ssrc == GetRtxSsrc()) {
-        //LogInfof(logger_, "handle rtx packet:%s", pkt->Dump().c_str());
         pkt->RtxDecode(GetPT(), GetSsrc());
-        //LogInfof(logger_, "handle rtx recover packet:%s", pkt->Dump().c_str());
-        //LogInfof(logger_, "handle rtx recover packet seq:%d, rtx seq:%d", pkt->GetSeq(), seq);
-
         ssrc = pkt->GetSsrc();
         seq  = pkt->GetSeq();
     } else {
@@ -80,7 +75,7 @@ void RtcRecvStream::HandleRtpPacket(RtpPacket* pkt) {
     }
 
     if (nack_enable_) {
-        nack_generator_.UpdateNackList(pkt);
+        nack_generator_.InputPacket(pkt);
     }
 
     statics_.Update(pkt->GetDataLength(), pkt->GetLocalMs()); 
@@ -207,8 +202,8 @@ void RtcRecvStream::HandleRtcpSr(RtcpSrPacket* sr_pkt) {
 
     last_sr_ms_ = now_ms;
     lsr_ = ((ntp.ntp_sec & 0xffff) << 16) | ((ntp.ntp_frac >> 16) & 0xffff);
-    LogDebugf(logger_, "rtc recv stream media type:%d, ntp:%u.%u, rtp ts:%ld, pkt count:%u, bytes:%u",
-            media_type_, ntp.ntp_sec, ntp.ntp_frac, rtp_timestamp_, pkt_count_, bytes_count_);
+    LogDebugf(logger_, "RtcRecvStream %u media type:%d, ntp:%u.%u, rtp ts:%ld, pkt count:%u, bytes:%u",
+            ssrc_, media_type_, ntp.ntp_sec, ntp.ntp_frac, rtp_timestamp_, pkt_count_, bytes_count_);
 }
 
 RtcpRrBlockInfo* RtcRecvStream::GetRtcpRr(int64_t now_ms) {
@@ -230,7 +225,7 @@ RtcpRrBlockInfo* RtcRecvStream::GetRtcpRr(int64_t now_ms) {
     rr_block->SetLsr(lsr_);
     rr_block->SetDlsr(dlsr);
 
-    LogDebugf(logger_, "send_rtcp_rr ssrc:%u, lsr:%u, dlsr:%u, frac lost:%d, total lost:%d",
+    LogDebugf(logger_, "RtcRecvStream %u sendRtcpRr lsr:%u, dlsr:%u, frac lost:%d, total lost:%d",
             ssrc_, lsr_, dlsr, frac_lost_, total_lost);
     return rr_block;
 }
@@ -269,15 +264,12 @@ void RtcRecvStream::RequestKeyFrame(int64_t now_ms) {
         last_keyframe_ms_ = now_millisec();
     }
 
-    RtcpPsPli* pspli_pkt = new RtcpPsPli();
+    RtcpPsPli pspli_pkt;
+    pspli_pkt.SetSenderSsrc(1);
+    pspli_pkt.SetMediaSsrc(ssrc_);
 
-    pspli_pkt->SetSenderSsrc(1);
-    pspli_pkt->SetMediaSsrc(ssrc_);
-
-    //LogInfof(logger_, "request frame:%s", pspli_pkt->Dump().c_str());
-    send_cb_->SendRtcpPacket(pspli_pkt->GetData(), pspli_pkt->GetDataLen());
-
-    delete pspli_pkt;
+    //LogInfof(logger_, "RtcRecvStream %u request frame:%s", ssrc_, pspli_pkt.Dump().c_str());
+    send_cb_->SendRtcpPacket(pspli_pkt.GetData(), pspli_pkt.GetDataLen());
 }
 
 void RtcRecvStream::GetStatics(size_t& kbits, size_t& pps) {
