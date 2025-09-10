@@ -22,12 +22,16 @@ list(APPEND LINK_LIBS getopt)
 add_definitions(-DSTREAMER_EXPORT)
 else()
 #set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++11 -g -Wno-deprecated -Wno-deprecated-declarations -Wno-reorder -Wall -fexceptions -frtti -D__STDC_FORMAT_MACROS -fPIC")
-set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++11 -g -Wno-deprecated -Wno-deprecated-declarations -Wall -fexceptions -frtti -D__STDC_FORMAT_MACROS -fPIC")
+set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++17 -g -Wno-deprecated -Wno-deprecated-declarations -Wall -fexceptions -frtti -D__STDC_FORMAT_MACROS -fPIC")
 list(APPEND LINK_LIBS pthread dl z m)
 if(LINUX)
 list(APPEND LINK_LIBS rt)
 endif()
 endif()
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)  # 强制要求支持 C++17，不 fallback 到低版本
+set(CMAKE_CXX_EXTENSIONS OFF)  # 禁用编译器扩展（如 g++ 的 -std=gnu++17），使用纯 C++ 标准
 
 set(CMAKE_OUTPUT_BASE ${CMAKE_BINARY_DIR}/output)
 set(BUILD_OUTPUT_BASE ${CMAKE_BINARY_DIR}/output)
@@ -52,7 +56,9 @@ endif()
 else()
 message("-----This is system ${CMAKE_SYSTEM_NAME}")
 endif()
-message("")
+message("-----------------------------------------------")
+message("-----------------------------------------------")
+message("-----------------------------------------------")
 
 # set include path
 include_directories(${CMAKE_BINARY_DIR}/output/include

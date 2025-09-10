@@ -194,6 +194,16 @@ add_executable(ws_server_demo
 target_link_libraries(ws_server_demo uv openssl ${LINK_LIBS})
 
 ################################################################
+# example: http server demo
+add_executable(http_server_demo
+            ${PROJECT_SOURCE_DIR}/src/net/http/http_server.cpp
+            ${PROJECT_SOURCE_DIR}/src/net/http/http_session.cpp
+            ${PROJECT_SOURCE_DIR}/src/utils/byte_crypto.cpp
+            ${PROJECT_SOURCE_DIR}/src/utils/base64.cpp
+            ${PROJECT_SOURCE_DIR}/src/tools/http_server_demo.cpp)
+target_link_libraries(http_server_demo uv openssl ${LINK_LIBS})
+
+################################################################
 ## example: oggdump
 ## read a ogg file --> oggdemux streamer --> dump ogg information
 add_executable(oggdump
@@ -221,3 +231,30 @@ add_executable(ts2ogg_streamer
             ${PROJECT_SOURCE_DIR}/src/tools/mpegts2ogg.cpp
             ${PROJECT_SOURCE_DIR}/src/cpp_streamer_factory.cpp)
 target_link_libraries(ts2ogg_streamer ${LINK_LIBS})
+
+################################################################
+## example: wav2pcm
+## read a wav file --> wavdemux --> write a pcm file
+add_executable(wav2pcm
+            ${PROJECT_SOURCE_DIR}/src/format/wav/wav_demuxer.hpp
+            ${PROJECT_SOURCE_DIR}/src/format/wav/wav_demuxer.cpp
+            ${PROJECT_SOURCE_DIR}/src/tools/wav2pcm.cpp)
+target_link_libraries(wav2pcm ${LINK_LIBS})
+
+################################################################
+## example: init mp4 writer
+add_executable(init_mp4_writer
+            ${PROJECT_SOURCE_DIR}/src/format/mp4/mp4_box.hpp
+            ${PROJECT_SOURCE_DIR}/src/format/h264_h265_header.cpp
+            ${PROJECT_SOURCE_DIR}/src/format/opus_header.cpp
+            ${PROJECT_SOURCE_DIR}/src/tools/init_mp4.cpp)
+target_link_libraries(init_mp4_writer ${LINK_LIBS})
+
+################################################################
+## example: fmp4_dump
+add_executable(fmp4_dump
+            ${PROJECT_SOURCE_DIR}/src/format/mp4/mp4_box.hpp
+            ${PROJECT_SOURCE_DIR}/src/format/h264_h265_header.cpp
+            ${PROJECT_SOURCE_DIR}/src/format/opus_header.cpp
+            ${PROJECT_SOURCE_DIR}/src/tools/fmp4_dump.cpp)
+target_link_libraries(fmp4_dump ${LINK_LIBS})

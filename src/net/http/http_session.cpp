@@ -120,7 +120,7 @@ int HttpSession::HandleRequest(const char* data, size_t data_size, bool& continu
             return 0;
         }
 
-        char* start = header_data_.Data() + content_start_;
+        const char* start = header_data_.Data() + content_start_;
         int len     = header_data_.DataLen() - content_start_;
         content_data_.AppendData(start, len);
     } else {
@@ -182,7 +182,7 @@ int HttpSession::HandleRequest(const char* data, size_t data_size, bool& continu
         if (!response_ptr_) {
             response_ptr_ = std::make_shared<HttpResponse>(this);
         }
-        request_->content_body_ = content_data_.Data();
+        request_->content_body_ = (char*)content_data_.Data();
         try {
             handle_ptr(request_, response_ptr_);
         } catch(const std::exception& e) {

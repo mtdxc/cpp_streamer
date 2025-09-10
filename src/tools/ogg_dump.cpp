@@ -34,7 +34,8 @@ class OpusDataCallbackImpl : public OpusDataCallbackI
 public:
     OpusDataCallbackImpl(Logger* logger):logger_(logger) {
     }
-    ~OpusDataCallbackImpl() {
+    virtual ~OpusDataCallbackImpl()
+    {
     }
 public:
     virtual void OnOpusPacketCallBack(int channel, int sample_rate, const uint8_t* data, size_t len, int64_t dts) override {

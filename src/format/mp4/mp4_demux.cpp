@@ -654,7 +654,8 @@ void Mp4Demuxer::makeMovItems() {
             } else if (trakinfo.codec_type_ == MEDIA_CODEC_H265) {
                 handleH265VpsSpsPps(trakinfo);
             } else {
-                CSM_THROW_ERROR("not support video codec:%s", codectype_tostring(trakinfo.codec_type_));
+                CSM_THROW_ERROR("not support video codec=%s:%d",
+                    codectype_tostring(trakinfo.codec_type_), trakinfo.codec_type_);
             }
         } else if (trakinfo.handler_type_ == "soun") {
             if (trakinfo.codec_type_ == MEDIA_CODEC_AAC) {
